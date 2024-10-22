@@ -45,7 +45,7 @@ class SpeakerIdDataset(Dataset):
 
         # aggregate the sorted data into chunks
         data_chunks = [[self.data[0]]]
-        max_dur_key = min([k for k in chunk_sizes if k >= self.data[0]["duration"]])
+        max_dur_key = min([k for k in chunk_sizes if k > self.data[0]["duration"]])
         for sample in self.data[1:]:
             if len(data_chunks[-1]) < chunk_sizes[max_dur_key]:
                 data_chunks[-1].append(sample)

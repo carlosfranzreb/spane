@@ -7,6 +7,7 @@ import random
 import numpy as np
 import torch
 from omegaconf import OmegaConf
+from tqdm import tqdm
 
 from spkanon_eval.anonymizer import Anonymizer
 from spkanon_eval.inference import infer
@@ -92,11 +93,11 @@ def main(config: OmegaConf, exp_folder: str):
 
 
 def compute_chunk_sizes(
-    datafile: str, model, sample_rate: int, n_chunks: int = 10
+    datafile: str, model, sample_rate: int, n_chunks: int = 5
 ) -> dict:
     """
     Compute the chunk sizes for the given datafile. The chunk size determines the
-    number of samples that are included in a batch depending on their maximum duration.
+    batch size depending on its maximum duration, to maximize GPU memory usage.
 
     Args:
         datafile: path to the datafile
@@ -104,8 +105,8 @@ def compute_chunk_sizes(
         n_chunks: the number of chunks to compute
 
     Returns:
-        A dictionary mapping the maximum duration of a batch to the number of samples
-        in the batch.
+        A dictionary mapping the maximum duration of a batch to the max. number of
+        samples of that duration that can fit in GPU memory.
     """
     LOGGER.info(f"Computing chunk sizes for file {datafile} and model {model}")
 
@@ -113,16 +114,19 @@ def compute_chunk_sizes(
     with open(datafile) as f:
         lines = f.readlines()
     max_dur = float(json.loads(lines[0])["duration"])
-    min_dur = float(json.loads(lines[-1])["duration"])
+    min_dur = float(json.loads(lines[-10])["duration"])
 
     if model.device == "cpu":
         LOGGER.warning("Model is on CPU. Skipping chunk size computation.")
         return {max_dur: 1}
-
+    
+    total_memory = torch.cuda.get_device_properties(0).total_memory
+    LOGGER.info(f"Target GPU memory usage: {(1024 ** 2):.2f} MB")
     chunk_sizes = dict()
     batch_size = 1
-    for chunk_max_dur in torch.linspace(max_dur, min_dur, n_chunks):
-        n_samples = int(chunk_max_dur.item() * sample_rate)
+    for chunk_max_dur in tqdm(torch.linspace(max_dur, min_dur, n_chunks)):
+        chunk_max_dur = torch.ceil(chunk_max_dur).item()
+        n_samples = int(chunk_max_dur * sample_rate)
         while True:
             batch = [
                 torch.randn([batch_size, n_samples], device=model.device),
@@ -130,7 +134,7 @@ def compute_chunk_sizes(
                 torch.ones(batch_size, device=model.device, dtype=torch.int32)
                 * n_samples,
             ]
-
+            torch.cuda.reset_peak_memory_stats()
             try:
                 if hasattr(model, "forward"):
                     data = [
@@ -139,11 +143,18 @@ def compute_chunk_sizes(
                     model.forward(batch, data)
                 else:
                     model.run(batch)
-                batch_size += 1
-            except torch.cuda.OutOfMemoryError:
-                break
+                chunk_sizes[chunk_max_dur] = batch_size
 
-        chunk_sizes[chunk_max_dur.item()] = batch_size
+                # increase batch size          
+                max_usage = torch.cuda.max_memory_allocated()
+                batch_size = int(batch_size * (total_memory / max_usage) * 0.9)
+
+            except torch.cuda.OutOfMemoryError:
+                chunk_sizes[chunk_max_dur] = int(chunk_sizes[chunk_max_dur] * 0.8)
+                break
+    
+    LOGGER.info(f"Computed chunk sizes: {chunk_sizes}")
+    return chunk_sizes
 
 
 def seed_everything(seed: int):

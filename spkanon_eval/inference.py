@@ -48,7 +48,7 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: OmegaConf) -
     sample_rate = config.data.config.sample_rate
 
     for _, batch, data in tqdm(eval_dataloader(data_cfg, datafile, model.device)):
-        audio_anon, length, target = model.forward(batch, data)
+        audio_anon, n_samples, target = model.forward(batch, data)
         for idx in range(len(audio_anon)):
             data[idx]["path"] = data[idx]["path"].replace(
                 data_cfg.root_folder, dump_dir
@@ -57,10 +57,11 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: OmegaConf) -
             os.makedirs(os.path.split(data[idx]["path"])[0], exist_ok=True)
             torchaudio.save(
                 data[idx]["path"],
-                audio_anon[idx, :, : length[idx]].cpu().detach(),
+                audio_anon[idx, :, : n_samples[idx]].cpu().detach(),
                 sample_rate,
                 format=format,
             )
+            data[idx]["duration"] = round(n_samples[idx].item() / sample_rate, 3)
             data[idx]["target"] = target[idx].item()
             writer.write(json.dumps(data[idx]) + "\n")
 

@@ -93,7 +93,7 @@ def main(config: OmegaConf, exp_folder: str):
 
 
 def compute_chunk_sizes(
-    datafile: str, model, sample_rate: int, n_chunks: int = 5
+    datafile: str, model, sample_rate: int, n_chunks: int = 10
 ) -> dict:
     """
     Compute the chunk sizes for the given datafile. The chunk size determines the
@@ -121,10 +121,10 @@ def compute_chunk_sizes(
         return {max_dur: 1}
     
     total_memory = torch.cuda.get_device_properties(0).total_memory
-    LOGGER.info(f"Target GPU memory usage: {(1024 ** 2):.2f} MB")
+    LOGGER.info(f"Target GPU memory usage: {(total_memory / 1024 ** 2):.2f} MB")
     chunk_sizes = dict()
     batch_size = 1
-    for chunk_max_dur in tqdm(torch.linspace(max_dur, min_dur, n_chunks)):
+    for chunk_max_dur in tqdm(torch.linspace(max_dur, min_dur, n_chunks + 1)[:-1]):
         chunk_max_dur = torch.ceil(chunk_max_dur).item()
         n_samples = int(chunk_max_dur * sample_rate)
         while True:

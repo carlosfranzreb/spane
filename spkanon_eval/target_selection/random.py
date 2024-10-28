@@ -13,6 +13,7 @@ class RandomSelector(BaseSelector):
         targets = torch.zeros(
             source_data.shape[0], dtype=torch.int64, device=source_data.device
         )
+
         for idx in range(source_data.shape[0]):
             candidate_indices = target_mask[:, idx].nonzero().flatten()
             sampled_candidate_idx = candidate_indices[

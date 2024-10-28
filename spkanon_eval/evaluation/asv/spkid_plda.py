@@ -28,7 +28,7 @@ This phase requires a dataset different from the one used for evaluation.
     data of the ASV system and the enrollment data are not anonymized.
 2. Lazy-informed: the attacker has access to the anonymization model. The training data
     of the ASV system is anonymized without consistent targets, and the enrollment data
-    is anonymized with consistent targets.
+    is anonymized without consistent targets as well, since VPC24.
 """
 
 import os
@@ -113,7 +113,7 @@ class ASV(ASVComponent):
 
         # perform dimensionality reduction with LDA if possible and store the model
         reduced_dims = self.config.get("reduced_dims", None)
-        if reduced_dims is not None and reduced_dims <= min(vecs.shape[1], n_speakers):
+        if reduced_dims is not None and reduced_dims > min(vecs.shape[1], n_speakers):
             LOGGER.info(f"Reducing dimensionality to {reduced_dims} with LDA")
             self.lda_model = LinearDiscriminantAnalysis(n_components=reduced_dims)
             vecs = self.lda_model.fit_transform(vecs, labels)
@@ -121,6 +121,16 @@ class ASV(ASVComponent):
                 self.lda_model,
                 open(os.path.join(models_dir, "lda.pkl"), "wb"),
             )
+        elif reduced_dims is not None:
+            LOGGER.warn("Dimensionality reduction with LDA is not possible.")
+            if reduced_dims > vecs.shape[1]:
+                LOGGER.warn(
+                    f"The number of training speakers ({n_speakers}) is too low."
+                )
+            else:
+                LOGGER.warn(
+                    f"Dim. {vecs.shape[1]} is lower than the desired reduction."
+                )
 
         # train the PLDA model and store the model
         LOGGER.info("Training PLDA model")

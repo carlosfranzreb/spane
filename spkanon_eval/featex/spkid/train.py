@@ -108,8 +108,8 @@ def prepare_dataset(hparams: dict, datafile: str) -> DynamicItemDataset:
     @sb.utils.data_pipeline.provides("sig")
     def audio_pipeline(wav: torch.Tensor, start: str, stop: str) -> torch.Tensor:
         start, stop = float(start), float(stop)
-        start_frame = start * hparams["sample_rate"]
-        num_frames = (stop - start) * hparams["sample_rate"]
+        start_frame = int(start * hparams["sample_rate"])
+        num_frames = int((stop - start) * hparams["sample_rate"])
         sig, _ = torchaudio.load(wav, num_frames=num_frames, frame_offset=start_frame)
         sig = sig.transpose(0, 1).squeeze(1)
         return sig

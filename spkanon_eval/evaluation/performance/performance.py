@@ -176,20 +176,26 @@ def run_gpu(model, repetitions, size):
         print(timings)
     """
 
-    batch = [torch.randn(size, dtype=torch.float).to("cuda"), torch.tensor(size[-1])]
+    # batch comprises a signal, a speaker label and the audio length
+    batch = [
+        torch.randn(size, dtype=torch.float).to("cuda"),
+        torch.ones(size[0]),
+        torch.ones(size[0]) * size[-1],
+    ]
+    data = [{"speaker_id": 1} for _ in range(size[0])]
+
     starter = torch.cuda.Event(enable_timing=True)
     ender = torch.cuda.Event(enable_timing=True)
     timings = np.zeros((repetitions, 1))
-    targets = [0] * size[0]
 
     with torch.no_grad():
         # GPU-WARM-UP
         for _ in range(10):
-            model.forward(batch, targets)
+            model.forward(batch, data)
 
         for i in range(repetitions):
             starter.record()
-            model.forward(batch, targets)
+            model.forward(batch, data)
             ender.record()
             torch.cuda.synchronize()
             timings[i] = starter.elapsed_time(ender) / 1000
@@ -218,18 +224,25 @@ def run_cpu(model, repetitions, size):
         print(timings)
     """
 
-    batch = [torch.randn(size, dtype=torch.float).to("cpu"), torch.tensor(size[-1])]
+    # batch comprises a signal, a speaker label and the audio length
+    batch = [
+        torch.randn(size, dtype=torch.float).to("cpu"),
+        torch.ones(size[0]),
+        torch.ones(size[0]) * size[-1],
+    ]
+    data = [{"speaker_id": 1} for _ in range(size[0])]
+
     timings = np.zeros((repetitions, 1))
     with torch.no_grad():
         for i in range(repetitions):
             start_time = time.time()
-            model.forward(batch, [0] * size[0])
+            model.forward(batch, data)
             timings[i] = time.time() - start_time
 
     return timings
 
 
-def max_batch_size(model, size, device):
+def max_batch_size(model, input_size, device):
     """
     Determines the maximum batch size that can fit in the GPU memory for a given model
     and input size.
@@ -256,11 +269,15 @@ def max_batch_size(model, size, device):
     batch_size = 1
     while batch_size > 0:
         try:
+            # batch comprises a signal, a speaker label and the audio length
+            size = (batch_size, input_size)
             batch = [
-                torch.randn((batch_size, size), dtype=torch.float).to(device),
-                torch.tensor(size),
+                torch.randn(size, dtype=torch.float).to("cuda"),
+                torch.ones(size[0]),
+                torch.ones(size[0]) * size[-1],
             ]
-            model.forward(batch, [0] * batch_size)
+            data = [{"speaker_id": 1} for _ in range(size[0])]
+            model.forward(batch, data)
             batch_size += 1
             torch.cuda.synchronize()
         except RuntimeError as err:

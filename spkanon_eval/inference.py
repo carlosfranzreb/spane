@@ -1,9 +1,11 @@
 import os
 import json
 import logging
+from typing import TextIO
 
+from torch.cuda import OutOfMemoryError, empty_cache
 import torchaudio
-from omegaconf import OmegaConf
+from omegaconf import OmegaConf, DictConfig
 from tqdm import tqdm
 
 from spkanon_eval.datamodules import eval_dataloader
@@ -13,7 +15,7 @@ from spkanon_eval.anonymizer import Anonymizer
 LOGGER = logging.getLogger("progress")
 
 
-def infer(exp_folder: str, df_name: str, model: Anonymizer, config: OmegaConf) -> str:
+def infer(exp_folder: str, df_name: str, model: Anonymizer, config: DictConfig) -> str:
     """
     - If the output datafile already exists, return its path.
     - Run each recording through the model and store the resulting audiofiles in
@@ -47,7 +49,7 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: OmegaConf) -
     data_cfg = config.data.config
     sample_rate = config.data.config.sample_rate
 
-    for _, batch, data in tqdm(eval_dataloader(data_cfg, datafile, model.device)):
+    def infer_batch(batch: list, data: list):
         audio_anon, n_samples, target = model.forward(batch, data)
         for idx in range(len(audio_anon)):
             data[idx]["path"] = data[idx]["path"].replace(
@@ -64,6 +66,24 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: OmegaConf) -
             data[idx]["duration"] = round(n_samples[idx].item() / sample_rate, 3)
             data[idx]["target"] = target[idx].item()
             writer.write(json.dumps(data[idx]) + "\n")
+    
+    def oom_handler(batch: list, data: list):
+        try:
+            infer_batch(batch, data)
+        except OutOfMemoryError as error:
+            batch_size = batch[0].shape[0]
+            if batch_size == 1:
+                LOGGER.error("Out of memory with batch size 1.")
+                raise error
+            else:
+                LOGGER.warning("Out of memory, retrying with half batch sizes.")
+                empty_cache()
+                half_idx = batch_size // 2
+                oom_handler([b[:half_idx] for b in batch], data[:half_idx])
+                oom_handler([b[half_idx:] for b in batch], data[half_idx:])
+
+    for _, batch, data in tqdm(eval_dataloader(data_cfg, datafile, model.device)):
+        oom_handler(batch, data)
 
     writer.close()
     return anon_datafile

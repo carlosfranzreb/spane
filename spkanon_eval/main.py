@@ -119,7 +119,7 @@ def compute_chunk_sizes(
     if model.device == "cpu":
         LOGGER.warning("Model is on CPU. Skipping chunk size computation.")
         return {max_dur: 1}
-    
+
     total_memory = torch.cuda.get_device_properties(0).total_memory
     LOGGER.info(f"Target GPU memory usage: {(total_memory / 1024 ** 2):.2f} MB")
     chunk_sizes = dict()
@@ -143,16 +143,16 @@ def compute_chunk_sizes(
                     model.forward(batch, data)
                 else:
                     model.run(batch)
-                chunk_sizes[chunk_max_dur] = batch_size
 
-                # increase batch size          
+                chunk_sizes[chunk_max_dur] = batch_size
                 max_usage = torch.cuda.max_memory_allocated()
-                batch_size = int(batch_size * (total_memory / max_usage) * 0.9)
+                batch_size = max(
+                    batch_size + 2, int(batch_size * (total_memory / max_usage) * 0.8)
+                )
 
             except torch.cuda.OutOfMemoryError:
-                chunk_sizes[chunk_max_dur] = int(chunk_sizes[chunk_max_dur] * 0.8)
                 break
-    
+
     LOGGER.info(f"Computed chunk sizes: {chunk_sizes}")
     return chunk_sizes
 

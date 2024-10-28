@@ -72,7 +72,7 @@ class SpeakerIdDataset(Dataset):
         return audios, speaker_ids, audio_lens
 
 
-def load_audio(audio_path: str, sample_rate: int) -> torch.Tensor:
+def load_audio(audio_path: str, sample_rate: int) -> Tensor:
     """
     Load the audio from the given path. If the sampling rate is different from
     given sampling rate, resample the audio. Return the waveform as a 1D tensor.

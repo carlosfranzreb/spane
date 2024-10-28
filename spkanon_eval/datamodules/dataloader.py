@@ -73,24 +73,3 @@ def data_iterator(datafile: str) -> Iterable[dict]:
     with open(datafile) as f:
         for line in f:
             yield json.loads(line)
-
-
-def prepare_dataset(datafile: str) -> DynamicItemDataset:
-    "Creates the datasets and their data processing pipelines."
-
-    dataset = DynamicItemDataset(datafile)
-
-    # define audio pipeline:
-    @sb.utils.data_pipeline.takes("path")
-    @sb.utils.data_pipeline.provides("sig")
-    def audio_pipeline(wav: torch.Tensor) -> torch.Tensor:
-        sig, _ = torchaudio.load(wav)
-        sig = sig.transpose(0, 1).squeeze(1)
-        return sig
-
-    sb.dataio.dataset.add_dynamic_item([dataset], audio_pipeline)
-    sb.dataio.dataset.set_output_keys(
-        [dataset], ["id", "sig", "speaker_id", "text", "duration", "gender"]
-    )
-
-    return dataset

@@ -69,10 +69,10 @@ def main(config: OmegaConf, exp_folder: str):
                     os.path.join(config.eval.config.exp_folder, "data", f + ".txt"),
                     f_dst,
                 )
-                if "anon" not in f:
-                    config.data.config.chunk_sizes[f] = compute_chunk_sizes(
-                        f_dst, model, config.sample_rate
-                    )
+                # if "anon" not in f:
+                #     config.data.config.chunk_sizes[f] = compute_chunk_sizes(
+                #         f_dst, model, config.sample_rate
+                #     )
             config.data.config.anon_folder = config.eval.config.exp_folder
 
         elif any([c.train for c in config.eval.components.values()]):
@@ -93,7 +93,7 @@ def main(config: OmegaConf, exp_folder: str):
 
 
 def compute_chunk_sizes(
-    datafile: str, model, sample_rate: int, n_chunks: int = 10
+    datafile: str, model, sample_rate: int, n_chunks: int = 5
 ) -> dict:
     """
     Compute the chunk sizes for the given datafile. The chunk size determines the

@@ -104,33 +104,23 @@ class SpkId(InferComponent):
             )
 
         # split the data of each speaker into training and validation sets
-        speaker_objs = list()
-        current_spk = None
+        speaker_objs = dict()
         for line in open(datafile):
             obj = json.loads(line)
             spk = obj["speaker_id"]
-            if current_spk is None:
-                current_spk = spk
-            elif spk != current_spk:
-                split_spk_utts(
-                    speaker_objs,
-                    splits["train"]["csv_writer"],
-                    splits["val"]["csv_writer"],
-                    hparams["val_ratio"],
-                    int(hparams["sentence_len"]),
-                    current_spk,
-                )
-                speaker_objs = list()
-                current_spk = spk
-            speaker_objs.append(obj)
-        split_spk_utts(
-            speaker_objs,
-            splits["train"]["csv_writer"],
-            splits["val"]["csv_writer"],
-            hparams["val_ratio"],
-            int(hparams["sentence_len"]),
-            current_spk,
-        )
+            if spk not in speaker_objs:
+                speaker_objs[spk] = list()
+            speaker_objs[spk].append(obj)
+        
+        for spk_id, spk_objs in speaker_objs.items():
+            split_spk_utts(
+                spk_objs,
+                splits["train"]["csv_writer"],
+                splits["val"]["csv_writer"],
+                hparams["val_ratio"],
+                int(hparams["sentence_len"]),
+                spk_id,
+            )
 
         for split in splits:
             splits[split]["writer"].close()

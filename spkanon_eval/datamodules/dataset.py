@@ -7,7 +7,6 @@ where the audio is resampled to the given sampling rate.
 import json
 import logging
 
-import torch
 from torch import Tensor, tensor
 from torch.utils.data import Dataset
 from torch.nn.utils.rnn import pad_sequence

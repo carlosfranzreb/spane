@@ -1,39 +1,30 @@
-import os
 import json
 import logging
 from collections.abc import Iterable
 
-import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
-import torchaudio
 from omegaconf import OmegaConf
-import speechbrain as sb
-from speechbrain.dataio.dataset import DynamicItemDataset
 
-from spkanon_eval.datamodules.dataset import SpeakerIdDataset
+from spkanon_eval.datamodules import SpeakerIdDataset, BatchSizeCalculator
 
 LOGGER = logging.getLogger("progress")
+bs_calculator = BatchSizeCalculator()
 
 
-def setup_dataloader(config: OmegaConf, datafile: str) -> DataLoader:
+def setup_dataloader(model, config: OmegaConf, datafile: str) -> DataLoader:
     """
     Create a dataloader with the SpeakerIdDataset.
     """
 
     LOGGER.info(f"Creating dataloader for {datafile}")
+    LOGGER.info(f"\tModel: {model.__class__.__name__}")
     LOGGER.info(f"\tSample rate: {config.sample_rate}")
     LOGGER.info(f"\tNum. workers: {config.num_workers}")
 
-    fname = os.path.splitext(os.path.basename(datafile))[0]
-    fname = fname.replace("anon_", "")
-    if "trials" in fname or "enrolls" in fname:
-        fname = fname.split("_")[0]
-
+    chunk_sizes = bs_calculator.calculate(datafile, model, config.sample_rate)
     return DataLoader(
-        dataset=SpeakerIdDataset(
-            datafile, config.sample_rate, config.chunk_sizes[fname]
-        ),
+        dataset=SpeakerIdDataset(datafile, config.sample_rate, chunk_sizes),
         num_workers=config.num_workers,
         batch_size=None,
     )
@@ -48,8 +39,7 @@ def eval_dataloader(
 
     - The data is not shuffled, so it can be mapped to the audio file paths, which
         they require to generate their results/reports.
-    - Return all additional data found in the manifest file, if any. This can be the
-        gender of the speaker, for example.
+    - Return all additional data found in the manifest file, e.g. gender, speaker_id.
     """
     LOGGER.info(f"Creating eval. DL for `{datafile}`")
 

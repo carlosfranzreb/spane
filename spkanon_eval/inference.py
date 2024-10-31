@@ -66,7 +66,7 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: DictConfig) 
             data[idx]["duration"] = round(n_samples[idx].item() / sample_rate, 3)
             data[idx]["target"] = target[idx].item()
             writer.write(json.dumps(data[idx]) + "\n")
-    
+
     def oom_handler(batch: list, data: list):
         try:
             infer_batch(batch, data)
@@ -86,4 +86,12 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: DictConfig) 
         oom_handler(batch, data)
 
     writer.close()
+
+    # sort the datafile by duration
+    objs = [json.loads(line) for line in open(anon_datafile)]
+    objs.sort(key=lambda x: x["duration"], reverse=True)
+    with open(anon_datafile, "w") as f:
+        for obj in objs:
+            f.write(json.dumps(obj) + "\n")
+
     return anon_datafile

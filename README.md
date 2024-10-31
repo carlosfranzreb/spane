@@ -1,4 +1,4 @@
-# SpkAnon Eval
+# Speaker Anonymization Evaluation (SpAnE)
 
 ![Workflow badge](https://github.com/carlosfranzreb/spkanon/actions/workflows/build.yml/badge.svg)
 

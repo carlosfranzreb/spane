@@ -86,7 +86,7 @@ class Whisper(InferComponent, EvalComponent):
         # compute chunk sizes for this model
         datafile_fname = os.path.splitext(os.path.basename(datafile))[0]
         self.config.data.config[datafile_fname] = compute_chunk_sizes(
-            datafile_fname, self.model, SAMPLE_RATE
+            datafile, self.model, SAMPLE_RATE
         )
 
         for _, batch, sample_data in eval_dataloader(

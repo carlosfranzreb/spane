@@ -14,6 +14,7 @@ from spkanon_eval.evaluate import SAMPLE_RATE
 from spkanon_eval.inference import infer
 from spkanon_eval.setup_module import setup
 from spkanon_eval.datamodules import setup_dataloader
+from spkanon_eval.main import compute_chunk_sizes
 from spkanon_eval.component_definitions import EvalComponent
 from .trials_enrolls import split_trials_enrolls
 
@@ -128,12 +129,18 @@ class ASVComponent(EvalComponent):
             speaker labels: (n_utterances,)
         """
         LOGGER.info(f"Computing SpkId vectors of {datafile}")
+
         labels = np.array([], dtype=int)  # utterance labels
         vecs = None  # spkid vecs of utterances
 
         spkid_config = copy.deepcopy(self.config.data.config)
         spkid_config.batch_size = self.config.spkid.batch_size
         spkid_config.sample_rate = SAMPLE_RATE
+        datafile_fname = os.path.splitext(os.path.basename(datafile))[0]
+        spkid_config.chunk_sizes[datafile_fname] = compute_chunk_sizes(
+            datafile, self.spkid_model, SAMPLE_RATE
+        )
+
         dl = setup_dataloader(spkid_config, datafile)
         for batch in tqdm(dl):
             new_vecs = self.spkid_model.run(batch).detach().cpu().numpy()

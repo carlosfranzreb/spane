@@ -105,7 +105,7 @@ class TestEvalASVCos(BaseTestClass):
         speakers = {"trials": None, "enrolls": None}
         for key in vecs:
             df = os.path.join(log_dir, "data", f"eval_{key}.txt")
-            dl = setup_dataloader(df_cfg, df)
+            dl = setup_dataloader(spkid_model, df_cfg, df)
             for batch in dl:
                 batch_vecs = spkid_model.run(batch).detach().cpu().numpy()
                 vecs[key] = (

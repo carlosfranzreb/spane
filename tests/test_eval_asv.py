@@ -109,6 +109,8 @@ class TestEvalASV(BaseTestClass):
         Ensure that, when defined in the config, an LDA algorithm is trained and saved
         to disk, and that it is used to reduce the dimensionality of the speaker
         embeddings to the right dimension.
+
+        ! n_components cannot be larger than min(n_features, n_classes - 1)
         """
 
         lda_output_size = 2
@@ -280,7 +282,7 @@ class TestEvalASV(BaseTestClass):
         spkid_config = copy.deepcopy(config.data.config)
         spkid_config.batch_size = SPKID_CONFIG["batch_size"]
         spkid_config.sample_rate = EVAL_SR
-        dl = setup_dataloader(spkid_config, anon_train_file)
+        dl = setup_dataloader(spkid_model, spkid_config, anon_train_file)
         for batch in dl:
             new_vecs = spkid_model.run(batch).detach().cpu().numpy()
             vecs = new_vecs if vecs is None else np.vstack([vecs, new_vecs])

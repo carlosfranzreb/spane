@@ -113,24 +113,25 @@ class ASV(ASVComponent):
 
         # perform dimensionality reduction with LDA if possible and store the model
         reduced_dims = self.config.get("reduced_dims", None)
-        if reduced_dims is not None and reduced_dims > min(vecs.shape[1], n_speakers):
-            LOGGER.info(f"Reducing dimensionality to {reduced_dims} with LDA")
-            self.lda_model = LinearDiscriminantAnalysis(n_components=reduced_dims)
-            vecs = self.lda_model.fit_transform(vecs, labels)
-            pickle.dump(
-                self.lda_model,
-                open(os.path.join(models_dir, "lda.pkl"), "wb"),
-            )
-        elif reduced_dims is not None:
-            LOGGER.warn("Dimensionality reduction with LDA is not possible.")
-            if reduced_dims > vecs.shape[1]:
-                LOGGER.warn(
-                    f"The number of training speakers ({n_speakers}) is too low."
+        if reduced_dims is not None:
+            if reduced_dims <= min(vecs.shape[1], n_speakers - 1):
+                LOGGER.info(f"Reducing dimensionality to {reduced_dims} with LDA")
+                self.lda_model = LinearDiscriminantAnalysis(n_components=reduced_dims)
+                vecs = self.lda_model.fit_transform(vecs, labels)
+                pickle.dump(
+                    self.lda_model,
+                    open(os.path.join(models_dir, "lda.pkl"), "wb"),
                 )
             else:
-                LOGGER.warn(
-                    f"Dim. {vecs.shape[1]} is lower than the desired reduction."
-                )
+                LOGGER.warning("Dimensionality reduction with LDA is not possible.")
+                if reduced_dims <= vecs.shape[1]:
+                    LOGGER.warning(
+                        f"The reduction is larger than the num. of speakers ({n_speakers})."
+                    )
+                else:
+                    LOGGER.warning(
+                        f"Dim. {vecs.shape[1]} is lower than the desired reduction."
+                    )
 
         # train the PLDA model and store the model
         LOGGER.info("Training PLDA model")
@@ -182,13 +183,13 @@ class ASV(ASVComponent):
 
 def count_speakers(datafile: str) -> int:
     """Count the number of speakers in the datafile."""
+    speakers = list()
     with open(datafile) as f:
-        current_spk = None
-        n_speakers = 0
         for line in f:
             obj = json.loads(line.strip())
-            if obj["label"] != current_spk:
-                current_spk = obj["label"]
-                n_speakers += 1
+            if obj["speaker_id"] not in speakers:
+                speakers.append(obj["speaker_id"])
+
+    n_speakers = len(speakers)
     LOGGER.info(f"Number of speakers in {datafile}: {n_speakers}")
     return n_speakers

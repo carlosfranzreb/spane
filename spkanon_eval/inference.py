@@ -82,7 +82,7 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: DictConfig) 
                 oom_handler([b[:half_idx] for b in batch], data[:half_idx])
                 oom_handler([b[half_idx:] for b in batch], data[half_idx:])
 
-    for _, batch, data in tqdm(eval_dataloader(data_cfg, datafile, model.device)):
+    for _, batch, data in tqdm(eval_dataloader(data_cfg, datafile, model)):
         oom_handler(batch, data)
 
     writer.close()

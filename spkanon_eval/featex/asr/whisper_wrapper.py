@@ -12,8 +12,6 @@ from spkanon_eval.datamodules.dataloader import eval_dataloader
 from spkanon_eval.evaluation.analysis import analyse_results
 from spkanon_eval.featex.asr.whisper_analysis_utils import analyse_func, headers_func
 from spkanon_eval.component_definitions import InferComponent, EvalComponent
-from spkanon_eval.main import compute_chunk_sizes
-
 
 SAMPLE_RATE = 16000  # Whisper expects 16kHz audio
 LOGGER = logging.getLogger("progress")
@@ -83,14 +81,8 @@ class Whisper(InferComponent, EvalComponent):
         with open(dump_file, "w", encoding="utf-8") as f:
             f.write("path n_edits n_words_ref wer text\n")
 
-        # compute chunk sizes for this model
-        datafile_fname = os.path.splitext(os.path.basename(datafile))[0]
-        self.config.data.config[datafile_fname] = compute_chunk_sizes(
-            datafile, self, SAMPLE_RATE
-        )
-
         for _, batch, sample_data in eval_dataloader(
-            self.config.data.config, datafile, self.device
+            self.config.data.config, datafile, self
         ):
             texts_pred = self.run(batch)  # compute the transcriptions for the batch
             for i, text_pred in enumerate(texts_pred):  # iterate through the batch

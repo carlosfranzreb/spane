@@ -7,6 +7,7 @@ same model and sample rate.
 
 import logging
 import json
+from math import ceil
 
 import torch
 from tqdm import tqdm
@@ -71,7 +72,7 @@ class BatchSizeCalculator:
                 for dur, bs in self.chunks[(id(model), sample_rate)].items():
                     diff = dur - chunk_max_dur
                     if diff >= 0 and diff <= 1:
-                        out_sizes[torch.ceil(dur).item()] = bs
+                        out_sizes[ceil(dur)] = bs
                         found = True
                         break
                 if found:

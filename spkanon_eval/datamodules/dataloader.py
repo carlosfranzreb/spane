@@ -31,7 +31,7 @@ def setup_dataloader(model, config: OmegaConf, datafile: str) -> DataLoader:
 
 
 def eval_dataloader(
-    config: OmegaConf, datafile: str, device: str
+    config: OmegaConf, datafile: str, model
 ) -> Iterable[str, list[Tensor], dict[str, str]]:
     """
     This function is called by evaluation and inference scripts. It is an
@@ -44,12 +44,12 @@ def eval_dataloader(
     LOGGER.info(f"Creating eval. DL for `{datafile}`")
 
     # initialize the dataloader and the iterator object for the sample data
-    dl = setup_dataloader(config, datafile)
+    dl = setup_dataloader(model, config, datafile)
     data_iter = data_iterator(datafile)
 
     # iterate over the batches in the dataloader
     for batch in dl:
-        batch = [b.to(device) for b in batch]
+        batch = [b.to(model.device) for b in batch]
         data = list()  # additional data to be returned
         # read as much `data` as there are samples in the batch
         while len(data) < batch[0].shape[0]:

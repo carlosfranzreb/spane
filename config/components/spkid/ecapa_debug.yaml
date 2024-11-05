@@ -5,4 +5,4 @@ spkid:
   train: ${eval.config.spkid_train}
   batch_size: 32
   num_workers: ${data.config.num_workers}
-  train_config: spkanon_eval/config/components/spkid/train_ecapa.yaml
+  train_config: spkanon_eval/config/components/spkid/train_ecapa_debug.yaml

@@ -41,7 +41,7 @@ class BatchSizeCalculator:
 
         Returns:
             A dictionary mapping the maximum duration of a batch to the max. number of
-            samples of that duration that can fit in GPU memory.
+            samples of that duration that can fit in GPU memory.        
         """
         LOGGER.info(
             f"Computing chunk sizes for {datafile} and {model.__class__.__name__}"
@@ -105,12 +105,18 @@ class BatchSizeCalculator:
                     self.chunks[(id(model), sample_rate)][chunk_max_dur] = batch_size
                     max_usage = torch.cuda.max_memory_allocated()
                     batch_size = max(
-                        batch_size + 2,
+                        batch_size + 4,
                         int(batch_size * (total_memory / max_usage) * 0.8),
                     )
 
                 except torch.cuda.OutOfMemoryError:
                     break
+                except RuntimeError as error:
+                    if "must fit into 32-bit index math" in str(error):
+                        break
+                    else:
+                        LOGGER.error(error)
+                        raise error
 
         LOGGER.info(f"\tComputed chunk sizes: {out_sizes}")
         return out_sizes

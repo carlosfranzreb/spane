@@ -6,6 +6,7 @@ import torchaudio
 import torch
 
 from spkanon_eval.datamodules import eval_dataloader
+from spkanon_eval.featex import Whisper
 
 
 class TestEvalDataloader(unittest.TestCase):
@@ -28,13 +29,31 @@ class TestEvalDataloader(unittest.TestCase):
         )
         self.device = "cpu"
 
+        config = OmegaConf.create(
+            {
+                "train": False,
+                "size": "tiny",
+                "output": "text",
+                "batch_size": 4,
+                "data": {
+                    "config": {
+                        "sample_rate": 16000,
+                        "batch_size": 4,
+                        "num_workers": 0,
+                        "chunk_sizes": {"ls-dev-clean-2": {100: 1}},
+                    },
+                },
+            }
+        )
+        self.model = Whisper(config, self.device)
+
     def test_eval_dataloader(self):
         """
         Test that the eval dataloader returns the correct number of batches and that
         the content of the batches matches that of the test datafiles. We asume that
         the dataset's spk2id mapping is correct.
         """
-        dl = eval_dataloader(self.config, self.datafile, self.device)
+        dl = eval_dataloader(self.config, self.datafile, self.model)
         samples = open(self.datafile).readlines()
 
         for datafile, batch, data in dl:

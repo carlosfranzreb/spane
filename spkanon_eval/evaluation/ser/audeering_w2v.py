@@ -81,7 +81,7 @@ class EmotionEvaluator(InferComponent, EvalComponent):
                 f.write(" ".join([f"{dim}_diff" for dim in dims]) + "\n")
 
         for _, batch, sample_data in eval_dataloader(
-            self.config.data.config, datafile, self.device
+            self.config.data.config, datafile, self
         ):
             # compute the emotion dimensions for the batch
             embs_y, dims_y = self.run(batch)

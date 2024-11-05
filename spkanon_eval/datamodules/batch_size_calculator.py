@@ -56,7 +56,7 @@ class BatchSizeCalculator:
 
         if model.device == "cpu":
             LOGGER.warning("\tModel is on CPU. Skipping chunk size computation.")
-            return {max_dur: 1}
+            return {ceil(max_dur): 1}
 
         total_memory = torch.cuda.get_device_properties(0).total_memory
         LOGGER.info(f"\tTarget GPU memory usage: {(total_memory / 1024 ** 2):.2f} MB")

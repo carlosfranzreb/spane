@@ -12,7 +12,9 @@ LOGGER = logging.getLogger("progress")
 bs_calculator = BatchSizeCalculator()
 
 
-def setup_dataloader(model, config: OmegaConf, datafile: str) -> DataLoader:
+def setup_dataloader(
+    model, config: OmegaConf, datafile: str, max_ratio: float = 0.8
+) -> DataLoader:
     """
     Create a dataloader with the SpeakerIdDataset.
     """
@@ -22,7 +24,9 @@ def setup_dataloader(model, config: OmegaConf, datafile: str) -> DataLoader:
     LOGGER.info(f"\tSample rate: {config.sample_rate}")
     LOGGER.info(f"\tNum. workers: {config.num_workers}")
 
-    chunk_sizes = bs_calculator.calculate(datafile, model, config.sample_rate)
+    chunk_sizes = bs_calculator.calculate(
+        datafile, model, config.sample_rate, max_ratio
+    )
     return DataLoader(
         dataset=SpeakerIdDataset(datafile, config.sample_rate, chunk_sizes),
         num_workers=config.num_workers,
@@ -31,7 +35,7 @@ def setup_dataloader(model, config: OmegaConf, datafile: str) -> DataLoader:
 
 
 def eval_dataloader(
-    config: OmegaConf, datafile: str, model
+    config: OmegaConf, datafile: str, model, max_ratio: float = 0.8
 ) -> Iterable[str, list[Tensor], dict[str, str]]:
     """
     This function is called by evaluation and inference scripts. It is an
@@ -40,11 +44,17 @@ def eval_dataloader(
     - The data is not shuffled, so it can be mapped to the audio file paths, which
         they require to generate their results/reports.
     - Return all additional data found in the manifest file, e.g. gender, speaker_id.
+
+    Args:
+        config: the configuration object
+        datafile: the path to the manifest file
+        model: the model to evaluate
+        max_ratio: the ratio of the GPU memory to use (see `BatchSizeCalculator`)
     """
     LOGGER.info(f"Creating eval. DL for `{datafile}`")
 
     # initialize the dataloader and the iterator object for the sample data
-    dl = setup_dataloader(model, config, datafile)
+    dl = setup_dataloader(model, config, datafile, max_ratio)
     data_iter = data_iterator(datafile)
 
     # iterate over the batches in the dataloader

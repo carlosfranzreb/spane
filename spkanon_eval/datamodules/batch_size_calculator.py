@@ -23,7 +23,9 @@ class BatchSizeCalculator:
         self.n_chunks = n_chunks
         self.chunks = dict()
 
-    def calculate(self, datafile: str, model, sample_rate: int) -> dict:
+    def calculate(
+        self, datafile: str, model, sample_rate: int, max_ratio: float
+    ) -> dict:
         """
         Compute the chunk sizes for the given datafile. The chunk size determines the
         batch size depending on its maximum duration, to maximize GPU memory usage. The
@@ -37,11 +39,13 @@ class BatchSizeCalculator:
             datafile: path to the datafile with sorted samples
             model: the model for which the chunk sizes are computed. It must have either
                 a `forward` or `run` method.
-            n_chunks: the number of chunks to compute
+            sample_rate: the sample rate of the audio files in the datafile
+            max_ratio: the ratio of the GPU memory to use.
+
 
         Returns:
             A dictionary mapping the maximum duration of a batch to the max. number of
-            samples of that duration that can fit in GPU memory.        
+            samples of that duration that can fit in GPU memory.
         """
         LOGGER.info(
             f"Computing chunk sizes for {datafile} and {model.__class__.__name__}"
@@ -106,7 +110,7 @@ class BatchSizeCalculator:
                     max_usage = torch.cuda.max_memory_allocated()
                     batch_size = max(
                         batch_size + 4,
-                        int(batch_size * (total_memory / max_usage) * 0.8),
+                        int(batch_size * (total_memory / max_usage) * max_ratio),
                     )
 
                 except torch.cuda.OutOfMemoryError:

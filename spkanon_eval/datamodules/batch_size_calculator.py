@@ -109,7 +109,7 @@ class BatchSizeCalculator:
                     self.chunks[(id(model), sample_rate)][chunk_max_dur] = batch_size
                     max_usage = torch.cuda.max_memory_allocated()
                     batch_size = max(
-                        batch_size + 4,
+                        batch_size + 8,
                         int(batch_size * (total_memory / max_usage) * max_ratio),
                     )
 

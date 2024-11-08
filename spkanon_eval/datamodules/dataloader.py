@@ -13,7 +13,7 @@ bs_calculator = BatchSizeCalculator()
 
 
 def setup_dataloader(
-    model, config: OmegaConf, datafile: str, max_ratio: float = 0.8
+    model, config: OmegaConf, datafile: str, max_ratio: float = 0.7
 ) -> DataLoader:
     """
     Create a dataloader with the SpeakerIdDataset.
@@ -35,7 +35,7 @@ def setup_dataloader(
 
 
 def eval_dataloader(
-    config: OmegaConf, datafile: str, model, max_ratio: float = 0.8
+    config: OmegaConf, datafile: str, model, max_ratio: float = 0.7
 ) -> Iterable[str, list[Tensor], dict[str, str]]:
     """
     This function is called by evaluation and inference scripts. It is an

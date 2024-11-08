@@ -24,8 +24,8 @@ LOGGER = logging.getLogger("progress")
 class ASVComponent(EvalComponent):
     def __init__(self, config, device, model=None):
         """Initialize the ASV system."""
-        if config.scenario == "lazy-informed" and model is None:
-            raise ValueError("Lazy-informed scenario requires a model")
+        if config.scenario == "semi-informed" and model is None:
+            raise ValueError("Semi-informed scenario requires a model")
 
         self.config = config
         self.device = device

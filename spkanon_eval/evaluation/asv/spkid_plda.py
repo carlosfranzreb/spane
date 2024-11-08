@@ -26,7 +26,7 @@ This phase requires a dataset different from the one used for evaluation.
 
 1. Ignorant: the attacker does not have access to the anonymization model. The training
     data of the ASV system and the enrollment data are not anonymized.
-2. Lazy-informed: the attacker has access to the anonymization model. The training data
+2. Semi-informed: the attacker has access to the anonymization model. The training data
     of the ASV system is anonymized without consistent targets, and the enrollment data
     is anonymized without consistent targets as well, since VPC24.
 """
@@ -76,7 +76,7 @@ class ASV(ASVComponent):
         """
         Train the PLDA model with the SpkId vectors and also the SpkId model.
         The anonymized samples are stored in the given path `exp_folder`.
-        If the scenario is "lazy-informed", the training data is anonymized without
+        If the scenario is "semi-informed", the training data is anonymized without
         consistent targets.
         """
 
@@ -88,8 +88,8 @@ class ASV(ASVComponent):
         )
         os.makedirs(dump_dir, exist_ok=True)
 
-        # If the scenario is "lazy-informed", anonymize the training data
-        if self.config.scenario == "lazy-informed":
+        # If the scenario is "semi-informed", anonymize the training data
+        if self.config.scenario == "semi-informed":
             LOGGER.info(f"Anonymizing training data: {datafile}")
             datafile = self.anonymize_data(exp_folder, "train_eval", False)
 

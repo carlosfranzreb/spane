@@ -17,7 +17,7 @@ making it faster and simpler to implement.
 
 1. Ignorant: the attacker does not have access to the anonymization model. The training
     data of the ASV system and the enrollment data are not anonymized.
-2. Lazy-informed: the attacker has access to the anonymization model. The training data
+2. Semi-informed: the attacker has access to the anonymization model. The training data
     of the ASV system is anonymized without consistent targets, and the enrollment data
     is anonymized with consistent targets.
 """

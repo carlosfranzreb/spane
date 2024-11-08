@@ -139,6 +139,7 @@ class ASVComponent(EvalComponent):
         dl = setup_dataloader(self.spkid_model, spkid_config, datafile)
         for batch in tqdm(dl):
             new_vecs = self.spkid_model.run(batch).detach().cpu().numpy()
+            new_vecs = np.nan_to_num(new_vecs)
             vecs = np.vstack([vecs, new_vecs]) if vecs is not None else new_vecs
             labels = np.concatenate([labels, batch[1].detach().cpu().numpy()])
         return vecs, labels

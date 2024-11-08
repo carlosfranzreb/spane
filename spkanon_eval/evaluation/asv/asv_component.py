@@ -81,8 +81,11 @@ class ASVComponent(EvalComponent):
             LOGGER.warning("No trials to evaluate; stopping component evaluation")
             return
 
-        # If the scenario is "lazy-informed", anonymize the enrollment data
-        if self.config.scenario == "lazy-informed":
+        # Anonymize enrollment data if necessary
+        if (
+            self.config.scenario == "semi-informed"
+            and self.config.inference.consistent_targets is True
+        ):
             LOGGER.info("Anonymizing enrollment data of the ASV system")
             f_enrolls = self.anonymize_data(exp_folder, "eval_enrolls", False)
 

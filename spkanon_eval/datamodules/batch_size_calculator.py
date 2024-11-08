@@ -13,7 +13,7 @@ import torch
 from tqdm import tqdm
 
 LOGGER = logging.getLogger("progress")
-
+SIZE_INCREASE = 8  # min. increase of batch size
 
 class BatchSizeCalculator:
     def __init__(self, n_chunks: int = 5):
@@ -62,18 +62,28 @@ class BatchSizeCalculator:
             LOGGER.warning("\tModel is on CPU. Skipping chunk size computation.")
             return {ceil(max_dur): 1}
 
+        model_key = (id(model), sample_rate)
+        first_time = model_key not in self.chunks
+        if first_time:
+            self.chunks[model_key] = dict()
+
         total_memory = torch.cuda.get_device_properties(0).total_memory
         LOGGER.info(f"\tTarget GPU memory usage: {(total_memory / 1024 ** 2):.2f} MB")
+
         out_sizes = dict()
         batch_size = 1
         for chunk_max_dur in tqdm(
             torch.linspace(max_dur, min_dur, self.n_chunks + 1)[:-1]
         ):
 
+            # reset batch size to the last value that worked for the larger chunk size
+            if len(out_sizes) > 0:
+                batch_size = list(out_sizes.values())[-1] + SIZE_INCREASE
+
             # check if the chunk size has already been computed
-            if (id(model), sample_rate) in self.chunks:
+            if not first_time:
                 found = False
-                for dur, bs in self.chunks[(id(model), sample_rate)].items():
+                for dur, bs in self.chunks[model_key].items():
                     diff = dur - chunk_max_dur
                     if diff >= 0 and diff <= 1:
                         out_sizes[ceil(dur)] = bs
@@ -81,8 +91,6 @@ class BatchSizeCalculator:
                         break
                 if found:
                     continue
-            else:
-                self.chunks[(id(model), sample_rate)] = dict()
 
             # compute the batch size for the current max. duration
             chunk_max_dur = torch.ceil(chunk_max_dur).item()
@@ -106,10 +114,10 @@ class BatchSizeCalculator:
                         model.run(batch)
 
                     out_sizes[chunk_max_dur] = batch_size
-                    self.chunks[(id(model), sample_rate)][chunk_max_dur] = batch_size
+                    self.chunks[model_key][chunk_max_dur] = batch_size
                     max_usage = torch.cuda.max_memory_allocated()
                     batch_size = max(
-                        batch_size + 8,
+                        batch_size + SIZE_INCREASE,
                         int(batch_size * (total_memory / max_usage) * max_ratio),
                     )
 

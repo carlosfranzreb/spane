@@ -6,6 +6,7 @@ import os
 import json
 import logging
 
+from spkanon_eval.datamodules import sort_datafile
 
 LOGGER = logging.getLogger("progress")
 
@@ -114,6 +115,10 @@ def split_trials_enrolls(
             spk_objs.append(obj)
 
         split_speaker(spk_objs, f_trials, f_enrolls, anon_folder, root_folder)
+    
+    # sort the files according to their duration
+    sort_datafile(f_trials)
+    sort_datafile(f_enrolls)
 
     return f_trials, f_enrolls
 

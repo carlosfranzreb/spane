@@ -8,7 +8,7 @@ import torchaudio
 from omegaconf import OmegaConf, DictConfig
 from tqdm import tqdm
 
-from spkanon_eval.datamodules import eval_dataloader
+from spkanon_eval.datamodules import eval_dataloader, sort_datafile
 from spkanon_eval.anonymizer import Anonymizer
 
 
@@ -86,12 +86,6 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: DictConfig) 
         oom_handler(batch, data)
 
     writer.close()
-
-    # sort the datafile by duration
-    objs = [json.loads(line) for line in open(anon_datafile)]
-    objs.sort(key=lambda x: x["duration"], reverse=True)
-    with open(anon_datafile, "w") as f:
-        for obj in objs:
-            f.write(json.dumps(obj) + "\n")
+    sort_datafile(anon_datafile)
 
     return anon_datafile

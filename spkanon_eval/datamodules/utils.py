@@ -83,3 +83,15 @@ def prepare_datafile(stage: str, config: OmegaConf, log_dir: str) -> str:
 
     LOGGER.info(f"Done with datafile prep for stage {stage}")
     return new_df
+
+
+def sort_datafile(path: str):
+    """
+    Sort the samples of the datafile according to its duration in reverse order (the
+    longest sample goes first), and dump them again into the same file.
+    """
+    objs = [json.loads(line) for line in open(path)]
+    objs.sort(key=lambda x: x["duration"], reverse=True)
+    with open(path, "w") as f:
+        for obj in objs:
+            f.write(json.dumps(obj) + "\n")

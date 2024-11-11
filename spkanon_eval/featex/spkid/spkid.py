@@ -42,6 +42,7 @@ class SpkId(InferComponent):
         self.device = device
         self.model.to(device)
 
+    @torch.inference_mode()
     def run(self, batch: list[torch.Tensor]) -> torch.Tensor:
         """
         Return speaker embeddings for the given batch of utterances.

@@ -7,6 +7,7 @@ from whisper.normalizers import EnglishTextNormalizer
 import torch
 import editdistance
 import numpy as np
+from tqdm import tqdm
 
 from spkanon_eval.datamodules.dataloader import eval_dataloader
 from spkanon_eval.evaluation.analysis import analyse_results
@@ -32,6 +33,7 @@ class Whisper(InferComponent, EvalComponent):
         if "data" in self.config:
             self.config.data.config.batch_size = config.batch_size
 
+    @torch.inference_mode()
     def run(self, batch):
         """
         1. pad each audio to span 30 seconds: whisper expects log-mel spectrograms
@@ -48,7 +50,10 @@ class Whisper(InferComponent, EvalComponent):
         mels = torch.cat(mels, dim=0)
         if self.out == "text":  # return predicted text
             out = self.model.decode(
-                mels, options=whisper.DecodingOptions(fp16=False, language="en")
+                mels,
+                options=whisper.DecodingOptions(
+                    fp16=self.device == "cuda", language="en"
+                ),
             )
             return [decoding.text for decoding in out]
         elif self.out == "encoding":  # return encoder output
@@ -81,8 +86,8 @@ class Whisper(InferComponent, EvalComponent):
         with open(dump_file, "w", encoding="utf-8") as f:
             f.write("path n_edits n_words_ref wer text\n")
 
-        for _, batch, sample_data in eval_dataloader(
-            self.config.data.config, datafile, self, max_ratio=0.6
+        for _, batch, sample_data in tqdm(
+            eval_dataloader(self.config.data.config, datafile, self, max_ratio=0.4)
         ):
             texts_pred = self.run(batch)  # compute the transcriptions for the batch
             for i, text_pred in enumerate(texts_pred):  # iterate through the batch

@@ -26,6 +26,7 @@ class WavlmWrapper(InferComponent):
         self.device = device
         self.config = config
 
+    @torch.inference_mode()
     def run(self, batch: list) -> dict:
         """
         Pases the batch through the model until the specified layer and returns the

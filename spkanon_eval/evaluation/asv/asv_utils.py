@@ -88,9 +88,8 @@ def analyse_results(datafile: str, llr_file: str) -> None:
 
     # for each speaker char., compute the EER for all its values
     for key, values in speaker_chars.items():
-        # iterate over all combinations of values
+        LOGGER.info(f"Computing EER for all values of {key}")
         for value in values:
-            LOGGER.info(f"Computing EER for {key} {value}")
             # get the indices of the rows that contain the values
             indices = np.where(
                 np.logical_and(

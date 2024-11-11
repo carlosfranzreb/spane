@@ -69,8 +69,10 @@ class ASVComponent(EvalComponent):
         # split the datafile into trial and enrollment datafiles
         root_dir = None if is_baseline else self.config.data.config.root_folder
         anon_folder = self.config.data.config.get("anon_folder", None)
+        anonymized_enrolls = self.config.inference.consistent_targets is False
         f_trials, f_enrolls = split_trials_enrolls(
             exp_folder,
+            anonymized_enrolls,
             root_dir,
             anon_folder,
             self.config.data.datasets.get("enrolls", None),
@@ -82,10 +84,7 @@ class ASVComponent(EvalComponent):
             return
 
         # Anonymize enrollment data if necessary
-        if (
-            self.config.scenario == "semi-informed"
-            and self.config.inference.consistent_targets is True
-        ):
+        if self.config.scenario == "semi-informed" and not anonymized_enrolls:
             LOGGER.info("Anonymizing enrollment data of the ASV system")
             f_enrolls = self.anonymize_data(exp_folder, "eval_enrolls", False)
 

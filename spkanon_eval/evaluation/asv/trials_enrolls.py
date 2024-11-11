@@ -13,6 +13,7 @@ LOGGER = logging.getLogger("progress")
 # TODO: this expects the data to be sorted by speaker_id, but we sort it now by duration
 def split_trials_enrolls(
     exp_folder: str,
+    anonymized_enrolls: bool,
     root_folder: str = None,
     anon_folder: str = None,
     enrolls: list = None,
@@ -26,7 +27,11 @@ def split_trials_enrolls(
 
     Args:
         exp_folder: path to the experiment folder.
-        root_folder (optional): root folder of the data.
+        anonymized_enrolls: whether the anonymized or original versions of the enrollment
+            utterances should be consider. Generally, this depends on whether they were
+            anonymized with or without consistent targets in the inference run.
+        root_folder (optional): root folder of the data. If we are computing a baseline
+            with original data, this is null.
         anon_folder (optional): folder where the anonymized evaluation data is stored.
             It it is not given, we assume that it is the same as the experiment folder.
         enrolls: list of files defining the enrollment data. Each of these files
@@ -44,10 +49,20 @@ def split_trials_enrolls(
     datafile = os.path.join(exp_folder, "data", "eval.txt")
     f_trials = os.path.join(exp_folder, "data", "eval_trials.txt")
     f_enrolls = os.path.join(exp_folder, "data", "eval_enrolls.txt")
-
+    
     if os.path.exists(f_trials):
         LOGGER.warning("Datafile splits into trial and enrolls already exist, skipping")
         return f_trials, f_enrolls
+
+    if root_folder is not None:
+        anon_datafile = os.path.join(exp_folder, "data", "anon_eval.txt")
+        anon_data = dict()
+        for line in open(anon_datafile):
+            obj = json.loads(line.strip())
+            fname = os.path.splitext(os.path.basename(obj["path"]))[0]
+            anon_data[fname] = line            
+    else:
+        anon_datafile = None
 
     if root_folder is None:
         LOGGER.info("No root folder given: original trial data will be used.")
@@ -72,10 +87,11 @@ def split_trials_enrolls(
             obj = json.loads(line.strip())
             fname = os.path.splitext(os.path.basename(obj["path"]))[0]
             if fname in enroll_fnames:
-                enroll_writer.write(line)
+                enroll_writer.write(
+                    anon_data[fname] if anon_datafile and anonymized_enrolls else line
+                )
             else:
-                obj["path"] = anon_path(obj["path"], anon_folder, root_folder)
-                trial_writer.write(json.dumps(obj) + "\n")
+                trial_writer.write(anon_data[fname] if anon_datafile else line)
 
         trial_writer.close()
         enroll_writer.close()
@@ -134,26 +150,12 @@ def split_speaker(
 
     trial_sample, enroll_data = spk_data[0], spk_data[1:]
     if root_folder is not None:
-        trial_sample["path"] = anon_path(trial_sample["path"], exp_folder, root_folder)
+        trial_sample["path"] = trial_sample["path"].replace(
+            root_folder, os.path.join(exp_folder, "results", "eval")
+        )
 
     with open(trial_file, "a") as f:
         f.write(json.dumps(trial_sample) + "\n")
     with open(enroll_file, "a") as f:
         for enroll_utt in enroll_data:
             f.write(json.dumps(enroll_utt) + "\n")
-
-
-def anon_path(path: str, exp_folder: str, root_folder: str = None) -> str:
-    """
-    Replace the root folder in the path with the folder where the anonymized evaluation
-    data is stored (`exp_folder/results/eval`).
-
-    Args:
-        path: the path to the file.
-        exp_folder: path to the experiment folder.
-        root_folder: root folder of the data.
-
-    Returns:
-        the path with the root folder replaced.
-    """
-    return path.replace(root_folder, os.path.join(exp_folder, "results", "eval"))

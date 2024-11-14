@@ -15,6 +15,7 @@ from tqdm import tqdm
 LOGGER = logging.getLogger("progress")
 SIZE_INCREASE = 8  # min. increase of batch size
 
+
 class BatchSizeCalculator:
     def __init__(self, n_chunks: int = 5):
         """
@@ -60,7 +61,7 @@ class BatchSizeCalculator:
 
         if model.device == "cpu":
             LOGGER.warning("\tModel is on CPU. Skipping chunk size computation.")
-            return {ceil(max_dur): 1}
+            return {ceil(max_dur): 2}
 
         model_key = (id(model), sample_rate)
         first_time = model_key not in self.chunks

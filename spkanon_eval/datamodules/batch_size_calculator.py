@@ -118,7 +118,7 @@ class BatchSizeCalculator:
                     max_usage = torch.cuda.max_memory_allocated()
                     batch_size = max(
                         batch_size + SIZE_INCREASE,
-                        int(batch_size * (total_memory / max_usage) * max_ratio),
+                        int(batch_size * (total_memory / max_usage)),
                     )
 
                 except torch.cuda.OutOfMemoryError:
@@ -130,5 +130,6 @@ class BatchSizeCalculator:
                         LOGGER.error(error)
                         raise error
 
+        out_sizes = {k: int(v * max_ratio) for k, v in out_sizes.items()}
         LOGGER.info(f"\tComputed chunk sizes: {out_sizes}")
         return out_sizes

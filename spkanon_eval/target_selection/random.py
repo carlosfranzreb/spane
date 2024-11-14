@@ -11,10 +11,10 @@ class RandomSelector(BaseSelector):
         """
         target_mask = self.get_candidate_target_mask(source_is_male)
         targets = torch.zeros(
-            source_data.shape[0], dtype=torch.int64, device=source_data.device
+            source_is_male.shape[0], dtype=torch.int64, device=source_data.device
         )
 
-        for idx in range(source_data.shape[0]):
+        for idx in range(source_is_male.shape[0]):
             candidate_indices = target_mask[:, idx].nonzero().flatten()
             sampled_candidate_idx = candidate_indices[
                 torch.randint(candidate_indices.shape[0], (1,))

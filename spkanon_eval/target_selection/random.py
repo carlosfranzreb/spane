@@ -9,9 +9,10 @@ class RandomSelector(BaseSelector):
         """
         Randomly select a target for the given input source_data.
         """
-        target_mask = self.get_candidate_target_mask(source_is_male)
+        device = source_data.device
+        target_mask = self.get_candidate_target_mask(source_is_male).to(device)
         targets = torch.zeros(
-            source_is_male.shape[0], dtype=torch.int64, device=source_data.device
+            source_is_male.shape[0], dtype=torch.int64, device=device
         )
 
         for idx in range(source_is_male.shape[0]):

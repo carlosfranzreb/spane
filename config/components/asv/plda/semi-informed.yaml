@@ -2,7 +2,7 @@
 asv_semi_informed:
   cls: spkanon_eval.evaluation.ASV
   scenario: semi-informed # attack scenario; can be ignorant or semi-informed
-  train: true
+  train: ${eval.config.spkid_train}
   inference: ${inference} # required to anonymize the training data in the semi-informed scenario
   sample_rate: ${synthesis.sample_rate} # required to anonymize the training data in the semi-informed scenario
   reduced_dims: ${eval.config.asv_reduce_dims} # (optional) no. of dimensions to reduce the spkid vectors to (VPC uses 200)

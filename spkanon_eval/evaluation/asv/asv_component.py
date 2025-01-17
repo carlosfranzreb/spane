@@ -144,4 +144,5 @@ class ASVComponent(EvalComponent):
             new_vecs = np.nan_to_num(new_vecs)
             vecs = np.vstack([vecs, new_vecs]) if vecs is not None else new_vecs
             labels = np.concatenate([labels, batch[1].detach().cpu().numpy()])
+
         return vecs, labels

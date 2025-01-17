@@ -1,6 +1,0 @@
-# this config must be a child of the `eval.components` config
-asv_lazy_informed:
-  cls: spkanon_eval.evaluation.FastASV
-  scenario: lazy-informed
-  spkid: ${eval.config.spkid}
-  train: false

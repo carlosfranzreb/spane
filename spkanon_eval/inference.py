@@ -47,7 +47,6 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: DictConfig) 
     writer = open(anon_datafile, "w")
     dump_dir = os.path.join(exp_folder, "results", df_name)
     data_cfg = config.data.config
-    sample_rate = config.data.config.sample_rate
 
     def infer_batch(batch: list, data: list):
         audio_anon, n_samples, target = model.forward(batch, data)
@@ -60,10 +59,10 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: DictConfig) 
             torchaudio.save(
                 data[idx]["path"],
                 audio_anon[idx, :, : n_samples[idx]].cpu().detach(),
-                sample_rate,
+                data_cfg.sample_rate,
                 format=format,
             )
-            data[idx]["duration"] = round(n_samples[idx].item() / sample_rate, 3)
+            data[idx]["duration"] = round(n_samples[idx].item() / data_cfg.sample_rate, 3)
             data[idx]["target"] = target[idx].item()
             writer.write(json.dumps(data[idx]) + "\n")
 

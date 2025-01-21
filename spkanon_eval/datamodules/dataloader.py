@@ -12,9 +12,7 @@ LOGGER = logging.getLogger("progress")
 bs_calculator = BatchSizeCalculator()
 
 
-def setup_dataloader(
-    model, config: OmegaConf, datafile: str, max_ratio: float = 0.7
-) -> DataLoader:
+def setup_dataloader(model, config: OmegaConf, datafile: str) -> DataLoader:
     """
     Create a dataloader with the SpeakerIdDataset.
     """
@@ -25,7 +23,7 @@ def setup_dataloader(
     LOGGER.info(f"\tNum. workers: {config.num_workers}")
 
     chunk_sizes = bs_calculator.calculate(
-        datafile, model, config.sample_rate, max_ratio
+        datafile, model, config.sample_rate, config.get("max_ratio", 0.7)
     )
     return DataLoader(
         dataset=SpeakerIdDataset(datafile, config.sample_rate, chunk_sizes),
@@ -35,7 +33,7 @@ def setup_dataloader(
 
 
 def eval_dataloader(
-    config: OmegaConf, datafile: str, model, max_ratio: float = 0.7
+    config: OmegaConf, datafile: str, model
 ) -> Iterable[str, list[Tensor], dict[str, str]]:
     """
     This function is called by evaluation and inference scripts. It is an
@@ -54,7 +52,7 @@ def eval_dataloader(
     LOGGER.info(f"Creating eval. DL for `{datafile}`")
 
     # initialize the dataloader and the iterator object for the sample data
-    dl = setup_dataloader(model, config, datafile, max_ratio)
+    dl = setup_dataloader(model, config, datafile)
     data_iter = data_iterator(datafile)
 
     # iterate over the batches in the dataloader

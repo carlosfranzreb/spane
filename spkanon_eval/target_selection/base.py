@@ -1,7 +1,7 @@
 import logging
 import torch
 from torch import Tensor
-from omegaconf import OmegaConf
+from omegaconf import DictConfig
 
 
 LOGGER = logging.getLogger("progress")
@@ -9,7 +9,7 @@ LOGGER = logging.getLogger("progress")
 
 class BaseSelector:
     def __init__(
-        self, vecs: list, cfg: OmegaConf, target_is_male: Tensor = None
+        self, vecs: list, cfg: DictConfig, target_is_male: Tensor = None
     ) -> None:
         """
         Initialize the target selector with the style vectors and a flag indicating

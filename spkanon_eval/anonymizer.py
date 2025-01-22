@@ -49,6 +49,8 @@ class Anonymizer:
         out = batch
         if self.featex is not None:
             out = self._run_module(self.featex, batch)
+        else:
+            out = {"audio": batch[0], "n_samples": batch[2]}
 
         out["source"] = batch[1]
         out["source_is_male"] = source_is_male

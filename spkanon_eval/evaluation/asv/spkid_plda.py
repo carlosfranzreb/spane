@@ -140,7 +140,7 @@ class ASV(ASVComponent):
         self.plda_model.fit_model(vecs, labels)
         if self.plda_model.model.pca is not None:
             n_components = self.plda_model.model.pca.components_.shape[0]
-            LOGGER.warn(f"PCA is used within PLDA with {n_components} components")
+            LOGGER.warning(f"PCA is used within PLDA with {n_components} components")
         pickle.dump(self.plda_model, open(os.path.join(models_dir, "plda.pkl"), "wb"))
 
     def evaluate(

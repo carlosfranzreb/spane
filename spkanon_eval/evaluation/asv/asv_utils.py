@@ -35,17 +35,17 @@ def compute_eer(
     """
     # check that there are trials and enrolls
     if len(trials) == 0 or len(enrolls) == 0:
-        LOGGER.warn("There are no trials or enrolls; cannot compute EER")
+        LOGGER.warning("There are no trials or enrolls; cannot compute EER")
         return None, None, None, -1
     # compute the ROC curve
     same_speaker = trials == enrolls
     fpr, tpr, thresholds = roc_curve(same_speaker, llrs)
     # check that there are no NaNs
     if np.any(np.isnan(fpr)):
-        LOGGER.warn("There are no different-speaker pairs; cannot compute EER")
+        LOGGER.warning("There are no different-speaker pairs; cannot compute EER")
         key = -1
     elif np.any(np.isnan(tpr)):
-        LOGGER.warn("There are no same-speaker pairs; cannot compute EER")
+        LOGGER.warning("There are no same-speaker pairs; cannot compute EER")
         key = -1
     # compute the EER threshold
     else:
@@ -80,7 +80,7 @@ def analyse_results(datafile: str, llr_file: str) -> None:
         f.write(f"{fname} {llrs.size} {thresholds[key]} {eer}\n")
     # dump the ROC curve
     RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
-    plt.plot([0, 1], [0, 1], "k--")
+    plt.plot([1, 0], [0, 1], "k--")
     plt.savefig(os.path.join(dump_folder, "roc_curve.png"))
 
     # store the spk label for each value of each speaker char.

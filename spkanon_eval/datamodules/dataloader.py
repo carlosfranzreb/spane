@@ -4,7 +4,8 @@ from collections.abc import Iterable
 
 from torch import Tensor
 from torch.utils.data import DataLoader
-from omegaconf import OmegaConf
+from omegaconf import DictConfig
+from omegaconf.errors import InterpolationKeyError
 
 from spkanon_eval.datamodules import SpeakerIdDataset, BatchSizeCalculator
 
@@ -12,7 +13,7 @@ LOGGER = logging.getLogger("progress")
 bs_calculator = BatchSizeCalculator()
 
 
-def setup_dataloader(model, config: OmegaConf, datafile: str) -> DataLoader:
+def setup_dataloader(model, config: DictConfig, datafile: str) -> DataLoader:
     """
     Create a dataloader with the SpeakerIdDataset.
     """
@@ -22,8 +23,13 @@ def setup_dataloader(model, config: OmegaConf, datafile: str) -> DataLoader:
     LOGGER.info(f"\tSample rate: {config.sample_rate}")
     LOGGER.info(f"\tNum. workers: {config.num_workers}")
 
+    try:
+        max_ratio = config.max_ratio
+    except InterpolationKeyError:
+        max_ratio = 0.7
+
     chunk_sizes = bs_calculator.calculate(
-        datafile, model, config.sample_rate, config.get("max_ratio", 0.7)
+        datafile, model, config.sample_rate, max_ratio
     )
     return DataLoader(
         dataset=SpeakerIdDataset(datafile, config.sample_rate, chunk_sizes),
@@ -33,7 +39,7 @@ def setup_dataloader(model, config: OmegaConf, datafile: str) -> DataLoader:
 
 
 def eval_dataloader(
-    config: OmegaConf, datafile: str, model
+    config: DictConfig, datafile: str, model
 ) -> Iterable[str, list[Tensor], dict[str, str]]:
     """
     This function is called by evaluation and inference scripts. It is an

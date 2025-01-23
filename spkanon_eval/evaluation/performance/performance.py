@@ -180,7 +180,7 @@ def run_gpu(model, repetitions, size):
     batch = [
         torch.randn(size, dtype=torch.float).to("cuda"),
         torch.ones(size[0]),
-        torch.ones(size[0]) * size[-1],
+        torch.ones(size[0], dtype=torch.int32) * size[-1],
     ]
     data = [{"speaker_id": 1} for _ in range(size[0])]
 
@@ -228,7 +228,7 @@ def run_cpu(model, repetitions, size):
     batch = [
         torch.randn(size, dtype=torch.float).to("cpu"),
         torch.ones(size[0]),
-        torch.ones(size[0]) * size[-1],
+        torch.ones(size[0], dtype=torch.int32) * size[-1],
     ]
     data = [{"speaker_id": 1} for _ in range(size[0])]
 
@@ -274,7 +274,7 @@ def max_batch_size(model, input_size, device):
             batch = [
                 torch.randn(size, dtype=torch.float).to("cuda"),
                 torch.ones(size[0]),
-                torch.ones(size[0]) * size[-1],
+                torch.ones(size[0], dtype=torch.int32) * size[-1],
             ]
             data = [{"speaker_id": 1} for _ in range(size[0])]
             model.forward(batch, data)

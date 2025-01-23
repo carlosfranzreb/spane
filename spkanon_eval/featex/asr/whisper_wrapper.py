@@ -14,7 +14,6 @@ from spkanon_eval.evaluation.analysis import analyse_results
 from spkanon_eval.featex.asr.whisper_analysis_utils import analyse_func, headers_func
 from spkanon_eval.component_definitions import InferComponent, EvalComponent
 
-SAMPLE_RATE = 16000  # Whisper expects 16kHz audio
 LOGGER = logging.getLogger("progress")
 
 

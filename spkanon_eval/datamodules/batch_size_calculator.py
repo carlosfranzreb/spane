@@ -10,6 +10,7 @@ import json
 from math import ceil
 
 import torch
+import torchaudio
 from tqdm import tqdm
 
 LOGGER = logging.getLogger("progress")
@@ -71,6 +72,12 @@ class BatchSizeCalculator:
         total_memory = torch.cuda.get_device_properties(0).total_memory
         LOGGER.info(f"\tTarget GPU memory usage: {(total_memory / 1024 ** 2):.2f} MB")
 
+        # load test audio used in the batches; e.g. needed for STT-TTS approach
+        audio = torchaudio.load(
+            "spkanon_eval/tests/data/LibriSpeech/dev-clean-2/2412/153948/2412-153948-0000.flac"
+        )[0].squeeze()
+        audio.to(model.device)
+
         out_sizes = dict()
         batch_size = 1
         for chunk_max_dur in tqdm(
@@ -92,13 +99,21 @@ class BatchSizeCalculator:
                         break
                 if found:
                     continue
-
-            # compute the batch size for the current max. duration
+            
+            # gather enough audio for the current chunk size
             chunk_max_dur = torch.ceil(chunk_max_dur).item()
             n_samples = int(chunk_max_dur * sample_rate)
+            if n_samples < audio.shape[0]:
+                audio_chunk = audio[:n_samples].clone()
+            else:
+                n_repeats = n_samples // audio.shape[0] + 1 
+                audio_chunk = audio.repeat(n_repeats)[:n_samples]
+
+            # compute the batch size for the current max. duration
             while True:
+                audio_batch = audio_chunk.unsqueeze(0).repeat(batch_size, 1)
                 batch = [
-                    torch.randn([batch_size, n_samples], device=model.device),
+                    audio_batch.to(model.device),
                     torch.randint(10, [batch_size], device=model.device),
                     torch.ones(batch_size, device=model.device, dtype=torch.int32)
                     * n_samples,

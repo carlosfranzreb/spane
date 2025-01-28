@@ -7,3 +7,4 @@ asv_ignorant:
   lda_ckpt: null
   plda_ckpt: null
   spkid: ${eval.config.spkid}
+  inference: ${inference}

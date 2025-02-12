@@ -25,8 +25,8 @@ class Whisper(InferComponent, EvalComponent):
         ).to(device)
         self.model_size = config.size
         self.device = device
-        self.out = config.output
         self.config = config
+        self.max_chars_div = self.config.get("max_chars_div", None)
 
         # update batch size; data is only needed by `eval_dir`
         if "data" in self.config:
@@ -47,15 +47,21 @@ class Whisper(InferComponent, EvalComponent):
                 whisper.log_mel_spectrogram(padded, self.model.dims.n_mels).unsqueeze(0)
             )
         mels = torch.cat(mels, dim=0)
-        if self.out == "text":  # return predicted text
+
+        if self.config.output == "text":
             out = self.model.decode(
                 mels,
                 options=whisper.DecodingOptions(
                     fp16=self.device == "cuda", language="en"
                 ),
             )
-            return [decoding.text for decoding in out]
-        elif self.out == "encoding":  # return encoder output
+            if self.max_chars_div is not None:
+                max_chars = int(batch[0].shape[1] / self.max_chars_div)
+            else:
+                max_chars = batch[0].shape[1]
+            return [decoding.text[:max_chars] for decoding in out]
+
+        elif self.config.output == "encoding":
             return self.model.encoder(mels)
 
     def train(self, exp_folder: str) -> None:

@@ -5,7 +5,6 @@ from collections.abc import Iterable
 from torch import Tensor
 from torch.utils.data import DataLoader
 from omegaconf import DictConfig
-from omegaconf.errors import InterpolationKeyError
 
 from spkanon_eval.datamodules import SpeakerIdDataset, BatchSizeCalculator
 
@@ -25,7 +24,7 @@ def setup_dataloader(model, config: DictConfig, datafile: str) -> DataLoader:
 
     try:
         max_ratio = config.max_ratio
-    except InterpolationKeyError:
+    except Exception:
         max_ratio = 0.7
 
     chunk_sizes = bs_calculator.calculate(

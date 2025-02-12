@@ -93,6 +93,10 @@ class ASVComponent(EvalComponent):
         for name, f in zip(["trials", "enrolls"], [f_trials, f_enrolls]):
             vecs[name], labels[name] = self.compute_spkid_vecs(f)
 
+            if self.config.get("save_spkembs", False) is True:
+                np.save(os.path.join(exp_folder, f"{name}_spkembs.npy"), vecs)
+                np.save(os.path.join(exp_folder, f"{name}_labels.npy"), labels)
+
         # call the child class to perform the evaluation
         self.evaluate(vecs, labels, dump_subfolder, datafile)
 

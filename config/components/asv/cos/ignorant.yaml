@@ -6,4 +6,4 @@ asv_ignorant_cos:
   train: ${eval.config.spkid_train}
   inference: ${inference} # required to anonymize the training data in the semi-informed scenario
   sample_rate: ${synthesis.sample_rate} # required to anonymize the training data in the semi-informed scenario
-  
+  save_spkembs: ${eval.config.save_spkembs}

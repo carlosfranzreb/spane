@@ -7,7 +7,7 @@ URL = "https://github.com/carlosfranzreb/spkanon_eval"
 EMAIL = "carlos.franzreb@dfki.de"
 AUTHOR = "Carlos Franzreb"
 REQUIRES_PYTHON = ">=3.9.0"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 
 def req_file(filename: str) -> list[str]:

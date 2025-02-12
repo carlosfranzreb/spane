@@ -1,9 +1,7 @@
 data:
-  config: # details of the data (TODO: should this differ for each dataset?)
+  config:
+    sample_rate: 16000
     root_folder: /ds/audio
-    # the following depend on the anonymization model
-    sample_rate: ${sample_rate} 
-    batch_size: ${batch_size}
     max_ratio: ${max_ratio}
 
   datasets:

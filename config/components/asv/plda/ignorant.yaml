@@ -8,3 +8,4 @@ asv_ignorant:
   plda_ckpt: null
   spkid: ${eval.config.spkid}
   inference: ${inference}
+  save_spkembs: ${eval.config.save_spkembs}

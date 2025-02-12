@@ -1,0 +1,15 @@
+data:
+  config: # details of the data (TODO: should this differ for each dataset?)
+    root_folder: /ds/audio
+    sample_rate: ${sample_rate} # depends on the anonymization model
+    batch_size: ${batch_size} # depends on the anonymization model
+
+  datasets:
+    eval:
+      - spkanon_eval/data/librispeech/ls-test-clean.txt
+    train_eval:
+      - spkanon_eval/data/librispeech/ls-train-clean-360.txt
+    targets:
+      - /netscratch/franzreb/spkanon/configs/knnvc_private_mine/target_feats/datafiles/top_gender.txt
+    enrolls:
+      - spkanon_eval/data/librispeech/ls-test-clean-enrolls.txt

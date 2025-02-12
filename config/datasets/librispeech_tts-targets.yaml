@@ -1,5 +1,5 @@
 data:
-  config: # details of the data (TODO: should this differ for each dataset?)
+  config:
     root_folder: /ds/audio
     # the following depend on the anonymization model
     sample_rate: ${sample_rate} 

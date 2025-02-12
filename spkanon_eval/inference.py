@@ -2,7 +2,9 @@ import os
 import json
 import logging
 from typing import TextIO
+from gc import collect
 
+import torch
 from torch.cuda import OutOfMemoryError, empty_cache
 import torchaudio
 from omegaconf import OmegaConf, DictConfig
@@ -48,8 +50,25 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: DictConfig) 
     dump_dir = os.path.join(exp_folder, "results", df_name)
     data_cfg = config.data.config
 
+    # define the resampler if needed
+    resampler = None
+    if config.sample_rate != data_cfg.sample_rate:
+        resampler = torchaudio.transforms.Resample(
+            config.sample_rate, data_cfg.sample_rate
+        ).to(model.device)
+
     def infer_batch(batch: list, data: list):
         audio_anon, n_samples, target = model.forward(batch, data)
+
+        # resample audio if needed and move it to cpu
+        if resampler is not None:
+            n_samples_before = audio_anon.shape[1]
+            audio_anon = resampler(audio_anon)
+            n_samples = torch.round(
+                n_samples * (data_cfg.sample_rate / config.sample_rate)
+            ).to(torch.int64)
+        audio_anon = audio_anon.cpu().detach()
+
         for idx in range(len(audio_anon)):
             data[idx]["path"] = data[idx]["path"].replace(
                 data_cfg.root_folder, dump_dir
@@ -58,11 +77,13 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: DictConfig) 
             os.makedirs(os.path.split(data[idx]["path"])[0], exist_ok=True)
             torchaudio.save(
                 data[idx]["path"],
-                audio_anon[idx, :, : n_samples[idx]].cpu().detach(),
+                audio_anon[idx, :, : n_samples[idx]],
                 data_cfg.sample_rate,
                 format=format,
             )
-            data[idx]["duration"] = round(n_samples[idx].item() / data_cfg.sample_rate, 3)
+            data[idx]["duration"] = round(
+                n_samples[idx].item() / data_cfg.sample_rate, 3
+            )
             data[idx]["target"] = target[idx].item()
             writer.write(json.dumps(data[idx]) + "\n")
 
@@ -77,6 +98,7 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: DictConfig) 
             else:
                 LOGGER.warning("Out of memory, retrying with half batch sizes.")
                 empty_cache()
+                collect()
                 half_idx = batch_size // 2
                 oom_handler([b[:half_idx] for b in batch], data[:half_idx])
                 oom_handler([b[half_idx:] for b in batch], data[half_idx:])

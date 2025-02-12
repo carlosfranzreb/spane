@@ -1,10 +1,11 @@
 speechbrain>=1.0.0
-openai-whisper==20230314
+openai-whisper>=20230314
 plda @ https://github.com/RaviSoji/plda/tarball/master
 omegaconf>=2.1.0
 transformers>=4.30.0
 editdistance>=0.6.2
 pandas>=2.0.3
+praat-parselmouth==0.4.5
 
 # NISQA dependencies
 librosa>=0.8.1

@@ -2,11 +2,12 @@
 asv_semi_informed:
   cls: spkanon_eval.evaluation.ASV
   scenario: semi-informed # attack scenario; can be ignorant or semi-informed
-  train: ${eval.config.spkid_train}
+  train: true # set this to false if you are using checkpoints
+  spkid: ${eval.config.asv.spkid}
+  train_mean_spkemb: null
+  backend: plda # plda or cos
   inference: ${inference} # required to anonymize the training data in the semi-informed scenario
   sample_rate: ${sample_rate} # required to anonymize the training data in the semi-informed scenario
-  reduced_dims: ${eval.config.asv_reduce_dims} # (optional) no. of dimensions to reduce the spkid vectors to (VPC uses 200)
-  lda_ckpt: null
-  plda_ckpt: null
-  spkid: ${eval.config.spkid}
+  reduce_dims: null # if set, PCA is used to reduce the spkembs before the backend
+  plda_ckpt: null # if null, PLDA will be trained
   save_spkembs: ${eval.config.save_spkembs}

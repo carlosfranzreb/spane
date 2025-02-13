@@ -1,9 +1,0 @@
-# this config must be a child of the `eval.components` config
-asv_semi_informed_cos:
-  cls: spkanon_eval.evaluation.FastASV
-  scenario: semi-informed
-  spkid: ${eval.config.spkid}
-  train: ${eval.config.spkid_train}
-  inference: ${inference} # required to anonymize the training data in the semi-informed scenario
-  sample_rate: ${sample_rate} # required to anonymize the training data in the semi-informed scenario
-  save_spkembs: ${eval.config.save_spkembs}

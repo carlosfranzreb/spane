@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 from typing import Callable
 
@@ -213,3 +214,17 @@ def compute_dists_chunk(vecs: np.array, indices: np.array) -> np.array:
     trials_norm = np.linalg.norm(trials, axis=-1)
     enrolls_norm = np.linalg.norm(enrolls, axis=-1)
     return dot_product / (trials_norm * enrolls_norm)
+
+
+def count_speakers(datafile: str) -> int:
+    """Count the number of speakers in the datafile."""
+    speakers = list()
+    with open(datafile) as f:
+        for line in f:
+            obj = json.loads(line.strip())
+            if obj["speaker_id"] not in speakers:
+                speakers.append(obj["speaker_id"])
+
+    n_speakers = len(speakers)
+    LOGGER.info(f"Number of speakers in {datafile}: {n_speakers}")
+    return n_speakers

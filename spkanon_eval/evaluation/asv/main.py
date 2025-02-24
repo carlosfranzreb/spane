@@ -149,21 +149,27 @@ class ASV(EvalComponent):
                 vecs[name], from_space="D", to_space="U_model"
             )
 
-        # compute LLRs of all pairs of trial and enrollment utterances
-        score_func = compute_llrs if self.config.backend == "plda" else compute_dists
-        scores, pairs = score_func(self.plda_model, vecs, CHUNK_SIZE)
+        # average the enrollment speaker embeddings across speakers
+        unique_speakers = np.unique(labels["enrolls"])
+        avg_vecs = np.zeros((len(unique_speakers), vecs["enrolls"].shape[1]))
+
+        for idx, speaker in enumerate(unique_speakers):
+            speaker_indices = np.where(labels["enrolls"] == speaker)[0]
+            avg_vecs[idx] = np.mean(vecs["enrolls"][speaker_indices], axis=0)
+
+        vecs["enrolls"] = avg_vecs
+        labels["enrolls"] = unique_speakers
+
+        # compute scores of all pairs of trial and enrollment utterances
+        if self.config.backend == "plda":
+            scores, pairs = compute_llrs(self.plda_model, vecs, CHUNK_SIZE)
+        else:
+            scores, pairs = compute_dists(vecs, CHUNK_SIZE)
         del vecs
 
-        # map utt indices to speaker indices
+        # map utt indices to speaker indices and dump scores
         pairs[:, 0] = labels["trials"][pairs[:, 0]]
         pairs[:, 1] = labels["enrolls"][pairs[:, 1]]
-
-        # avg. scores across speakers and dump them to the experiment folder
-        LOGGER.info("Averaging scores across speakers")
-        LOGGER.info(f"No. of speaker pairs: {pairs.shape[0]}")
-        unique_pairs, inverse = np.unique(pairs, axis=0, return_inverse=True)
-        score_avgs = np.bincount(inverse, weights=scores) / np.bincount(inverse)
-
         score_file = os.path.join(dump_folder, "scores.npy")
         np.save(score_file, np.hstack((unique_pairs, score_avgs.reshape(-1, 1))))
 

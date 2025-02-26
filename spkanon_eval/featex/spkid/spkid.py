@@ -32,9 +32,9 @@ class SpkId(InferComponent):
         self.model = EncoderClassifier.from_hparams(
             source=config.path, savedir=self.save_dir, run_opts={"device": device}
         )
-        if config.get("emb_model_ckpt", None) is not None:
-            LOGGER.info(f"Loading emb. model from {config.emb_model_ckpt}")
-            state_dict = torch.load(config.emb_model_ckpt, map_location=device)
+        if config.get("ckpt", None) is not None:
+            LOGGER.info(f"Loading emb. model from {config.ckpt}")
+            state_dict = torch.load(config.ckpt, map_location=device)
             self.model.mods.embedding_model.load_state_dict(state_dict)
         self.model.eval()
 

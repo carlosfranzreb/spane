@@ -82,7 +82,7 @@ class ASV(EvalComponent):
         # if training is skipped, load the mean emb. of the training data
         self.train_mean_spkemb = None
         if config.train is False:
-            self.train_mean_spkemb = np.load(self.config.train_mean_spkemb)
+            self.train_mean_spkemb = np.load(config.train_mean_spkemb)
 
     def train(self, exp_folder: str) -> None:
         """
@@ -92,9 +92,8 @@ class ASV(EvalComponent):
         consistent targets.
         """
 
-        datafile = os.path.join(exp_folder, "data", "train_eval.txt")
-
         # define and create the directory where models and training data are stored
+        datafile = os.path.join(exp_folder, "data", "train_eval.txt")
         dump_dir = os.path.join(
             exp_folder, "eval", self.component_name, self.config.scenario, "train"
         )
@@ -145,9 +144,10 @@ class ASV(EvalComponent):
         """
         for name in ["trials", "enrolls"]:
             vecs[name] -= self.train_mean_spkemb
-            vecs[name] = self.plda_model.model.transform(
-                vecs[name], from_space="D", to_space="U_model"
-            )
+            if self.config.backend == "plda":
+                vecs[name] = self.plda_model.model.transform(
+                    vecs[name], from_space="D", to_space="U_model"
+                )
 
         # average the enrollment speaker embeddings across speakers
         unique_speakers = np.unique(labels["enrolls"])
@@ -171,7 +171,7 @@ class ASV(EvalComponent):
         pairs[:, 0] = labels["trials"][pairs[:, 0]]
         pairs[:, 1] = labels["enrolls"][pairs[:, 1]]
         score_file = os.path.join(dump_folder, "scores.npy")
-        np.save(score_file, np.hstack((unique_pairs, score_avgs.reshape(-1, 1))))
+        np.save(score_file, np.hstack((pairs, scores.reshape(-1, 1))))
 
         # compute the EER for the data and its subsets w.r.t. speaker chars.
         analyse_results(datafile, score_file)

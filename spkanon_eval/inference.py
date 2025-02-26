@@ -3,6 +3,7 @@ import json
 import logging
 from typing import TextIO
 from gc import collect
+from copy import deepcopy
 
 import torch
 from torch.cuda import OutOfMemoryError, empty_cache
@@ -62,7 +63,6 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: DictConfig) 
 
         # resample audio if needed and move it to cpu
         if resampler is not None:
-            n_samples_before = audio_anon.shape[1]
             audio_anon = resampler(audio_anon)
             n_samples = torch.round(
                 n_samples * (data_cfg.sample_rate / config.sample_rate)
@@ -103,7 +103,9 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: DictConfig) 
                 oom_handler([b[:half_idx] for b in batch], data[:half_idx])
                 oom_handler([b[half_idx:] for b in batch], data[half_idx:])
 
-    for _, batch, data in tqdm(eval_dataloader(data_cfg, datafile, model)):
+    dl_config = deepcopy(data_cfg)
+    dl_config.sample_rate = config.sample_rate
+    for _, batch, data in tqdm(eval_dataloader(dl_config, datafile, model)):
         oom_handler(batch, data)
 
     writer.close()

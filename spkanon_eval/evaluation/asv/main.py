@@ -32,7 +32,6 @@ This phase requires a dataset different from the one used for evaluation.
 """
 
 import os
-import copy
 import pickle
 import logging
 
@@ -44,7 +43,6 @@ from tqdm import tqdm
 from spkanon_eval.anonymizer import Anonymizer
 from spkanon_eval.component_definitions import EvalComponent
 from spkanon_eval.setup_module import setup
-from spkanon_eval.evaluate import SAMPLE_RATE
 from spkanon_eval.inference import infer
 from spkanon_eval.datamodules import setup_dataloader
 from .trials_enrolls import split_trials_enrolls
@@ -193,7 +191,7 @@ class ASV(EvalComponent):
         # split the datafile into trial and enrollment datafiles
         root_dir = None if is_baseline else self.config.data.config.root_folder
         anon_folder = self.config.data.config.get("anon_folder", None)
-        anonymized_enrolls = self.config.inference.consistent_targets is False
+        anonymized_enrolls = self.config.consistent_targets is False
         f_trials, f_enrolls = split_trials_enrolls(
             exp_folder,
             anonymized_enrolls,
@@ -263,10 +261,9 @@ class ASV(EvalComponent):
         vecs = None  # spkid vecs of utterances
 
         spkid_config = copy.deepcopy(self.config.data.config)
-        spkid_config.batch_size = self.config.spkid.batch_size
-        spkid_config.sample_rate = SAMPLE_RATE
-
+        spkid_config.sample_rate_in = spkid_config.sample_rate
         dl = setup_dataloader(self.spkid_model, spkid_config, datafile)
+
         for batch in tqdm(dl):
             new_vecs = self.spkid_model.run(batch).detach().cpu().numpy()
             new_vecs = np.nan_to_num(new_vecs)

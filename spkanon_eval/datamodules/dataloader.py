@@ -19,7 +19,7 @@ def setup_dataloader(model, config: DictConfig, datafile: str) -> DataLoader:
 
     LOGGER.info(f"Creating dataloader for {datafile}")
     LOGGER.info(f"\tModel: {model.__class__.__name__}")
-    LOGGER.info(f"\tSample rate: {config.sample_rate}")
+    LOGGER.info(f"\tSample rate: {config.sample_rate_in}")
     LOGGER.info(f"\tNum. workers: {config.num_workers}")
 
     try:
@@ -28,10 +28,10 @@ def setup_dataloader(model, config: DictConfig, datafile: str) -> DataLoader:
         max_ratio = 0.7
 
     chunk_sizes = bs_calculator.calculate(
-        datafile, model, config.sample_rate, max_ratio
+        datafile, model, config.sample_rate_in, max_ratio
     )
     return DataLoader(
-        dataset=SpeakerIdDataset(datafile, config.sample_rate, chunk_sizes),
+        dataset=SpeakerIdDataset(datafile, config.sample_rate_in, chunk_sizes),
         num_workers=config.num_workers,
         batch_size=None,
     )

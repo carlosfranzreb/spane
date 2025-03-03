@@ -31,10 +31,6 @@ def evaluate(exp_folder: str, model: Anonymizer, config: OmegaConf) -> None:
     # ensure that the directory where the evaluation results will be stored exists
     os.makedirs(os.path.join(exp_folder, "eval"), exist_ok=True)
 
-    # change the config params to match the anonymized data
-    data_cfg = copy.deepcopy(config.data)
-    data_cfg.config.sample_rate = SAMPLE_RATE
-
     # use the anonymized datafiles if we are not evaluating the baseline
     is_baseline = config.eval.config.baseline
     fname = "eval" if is_baseline is True else "anon_eval"
@@ -42,7 +38,7 @@ def evaluate(exp_folder: str, model: Anonymizer, config: OmegaConf) -> None:
 
     # iterate over the components and train & evaluate them
     for name, cfg in config.eval.components.items():
-        cfg.data = copy.deepcopy(data_cfg)
+        cfg.data = copy.deepcopy(config.data)
         component = setup(cfg, config.device, model=model)
 
         if cfg.train is True:

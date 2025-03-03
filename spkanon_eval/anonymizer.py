@@ -127,3 +127,17 @@ class Anonymizer:
                     component.to(device)
         self.synthesis.to(device)
         self.device = device
+    
+    def reset(self) -> None:
+        """
+        Propagate reset() to all the components that have it. This is used to recover
+        from an OOM error, as some components may keep some CUDA memory allocated,
+        hindering a complete recovery.
+        """
+        for module in [self.featex, self.featproc, self.featfusion]:
+            if module is None:
+                continue
+
+            for component in module.values():
+                if hasattr(component, "reset"):
+                    component.reset()    

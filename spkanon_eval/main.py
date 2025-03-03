@@ -74,11 +74,3 @@ def main(config: OmegaConf, exp_folder: str):
 
         evaluate(exp_folder, model, config)
         LOGGER.info("End of evaluation")
-
-
-def seed_everything(seed: int):
-    """Set the seed for Python, Numpy and Torch."""
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)

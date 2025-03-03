@@ -1,10 +1,12 @@
 import os
 import string
 import logging
+from gc import get_objects, get_referrers, collect
 
 import whisper
 from whisper.normalizers import EnglishTextNormalizer
 import torch
+from torch import Tensor
 import editdistance
 import numpy as np
 from tqdm import tqdm
@@ -19,21 +21,20 @@ LOGGER = logging.getLogger("progress")
 
 class Whisper(InferComponent, EvalComponent):
     def __init__(self, config, device, **kwargs):
+        self.device = device
+        self.config = config
         self.model = whisper.load_model(
             config.size,
             download_root="checkpoints/whisper",
         ).to(device)
-        self.model_size = config.size
-        self.device = device
-        self.config = config
+        self.model.eval()
         self.max_chars_div = self.config.get("max_chars_div", None)
-
-        # update batch size; data is only needed by `eval_dir`
-        if "data" in self.config:
-            self.config.data.config.batch_size = config.batch_size
+        self.options = whisper.DecodingOptions(
+            fp16=self.device == "cuda", language="en"
+        )
 
     @torch.inference_mode()
-    def run(self, batch):
+    def run(self, batch: list) -> list:
         """
         1. pad each audio to span 30 seconds: whisper expects log-mel spectrograms
             that span 30 seconds as input
@@ -49,17 +50,13 @@ class Whisper(InferComponent, EvalComponent):
         mels = torch.cat(mels, dim=0)
 
         if self.config.output == "text":
-            out = self.model.decode(
-                mels,
-                options=whisper.DecodingOptions(
-                    fp16=self.device == "cuda", language="en"
-                ),
-            )
+            out = self.model.decode(mels, options=self.options)
             if self.max_chars_div is not None:
                 max_chars = int(batch[0].shape[1] / self.max_chars_div)
             else:
                 max_chars = batch[0].shape[1]
-            return [decoding.text[:max_chars] for decoding in out]
+            texts = [decoding.text[:max_chars] for decoding in out]
+            return texts
 
         elif self.config.output == "encoding":
             return self.model.encoder(mels)
@@ -79,10 +76,10 @@ class Whisper(InferComponent, EvalComponent):
             datafile: datafile to evaluate
         """
         LOGGER.info("Computing WER of eval data with dataloader")
-        if self.out != "text":
-            self.out = "text"
+        if self.config.output != "text":
+            self.config.output = "text"
         normalizer = EnglishTextNormalizer()
-        dump_folder = os.path.join(exp_folder, "eval", f"whisper-{self.model_size}")
+        dump_folder = os.path.join(exp_folder, "eval", f"whisper-{self.config.size}")
         os.makedirs(dump_folder, exist_ok=True)
         stats = {"n_edits": list(), "n_words_ref": list()}
 
@@ -119,9 +116,7 @@ class Whisper(InferComponent, EvalComponent):
         )
 
     def to(self, device):
-        """
-        Implementation of PyTorch's `to()` method to set the device.
-        """
+        """Implementation of PyTorch's `to()` method to set the device."""
         self.model.to(device)
         self.device = device
 

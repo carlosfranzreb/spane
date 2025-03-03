@@ -10,8 +10,12 @@ import json
 from math import ceil
 
 import torch
+from torch.cuda import OutOfMemoryError
+from torch import Tensor
 import torchaudio
 from tqdm import tqdm
+
+from spkanon_eval.utils import reset
 
 LOGGER = logging.getLogger("progress")
 SIZE_INCREASE = 8  # min. increase of batch size
@@ -127,7 +131,8 @@ class BatchSizeCalculator:
                         ]
                         model.forward(batch, data)
                     else:
-                        model.run(batch)
+                        with torch.no_grad():
+                            model.run(batch)
 
                     out_sizes[chunk_max_dur] = batch_size
                     self.chunks[model_key][chunk_max_dur] = batch_size
@@ -137,10 +142,12 @@ class BatchSizeCalculator:
                         int(batch_size * (total_memory / max_usage)),
                     )
 
-                except torch.cuda.OutOfMemoryError:
+                except OutOfMemoryError:
+                    reset(model)
                     break
                 except RuntimeError as error:
                     if "must fit into 32-bit index math" in str(error):
+                        reset(model)
                         break
                     else:
                         LOGGER.error(error)

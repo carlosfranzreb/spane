@@ -1,9 +1,5 @@
 data:
-  config:
-    sample_rate: 16000
-    root_folder: /ds/audio
-    max_ratio: ${max_ratio}
-
+  config_cfg: spkanon_eval/config/datasets/config.yaml
   datasets:
     eval:
       - spkanon_eval/data/librispeech/ls-test-clean.txt

@@ -14,11 +14,9 @@ Filename identifiers
 7. Actor (01 to 24. Odd numbered actors are male, even numbered actors are female).
 """
 
-
 import os
 import json
 from argparse import ArgumentParser
-import time
 
 import torchaudio
 

@@ -48,8 +48,8 @@ class WavlmWrapper(InferComponent):
                     output_layer=max(self.config.layer),
                 )[0]
                 out = list()
-                for l in self.config.layer:
-                    out.append(all_feats[l][0].transpose(0, 1))
+                for layer in self.config.layer:
+                    out.append(all_feats[layer][0].transpose(0, 1))
                 out = torch.stack(out)
             else:
                 out = self.model.extract_features(

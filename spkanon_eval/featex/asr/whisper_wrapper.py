@@ -1,12 +1,10 @@
 import os
 import string
 import logging
-from gc import get_objects, get_referrers, collect
 
 import whisper
 from whisper.normalizers import EnglishTextNormalizer
 import torch
-from torch import Tensor
 import editdistance
 import numpy as np
 from tqdm import tqdm

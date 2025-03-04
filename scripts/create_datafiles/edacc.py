@@ -11,7 +11,6 @@ About the dataset:
     conversation ID.
 """
 
-
 import os
 import json
 from argparse import ArgumentParser
@@ -36,12 +35,12 @@ def create_file(folder, subset, dump_file, root_folder, max_duration=None):
     # store the speaker information in a dict
     speakers = pandas.read_csv(os.path.join(folder, "linguistic_background.csv"))
     convos = list()
-    for l in open(os.path.join(folder, subset, "conv.list")):
-        l = l.strip()
-        if "_" in l:
-            convos.append(l.split("_")[0])
+    for line in open(os.path.join(folder, subset, "conv.list")):
+        line = line.strip()
+        if "_" in line:
+            convos.append(line.split("_")[0])
         else:
-            convos.append(l)
+            convos.append(line)
 
     # create the mapping from utterance ID to speaker ID
     utt2spk = {}

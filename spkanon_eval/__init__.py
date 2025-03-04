@@ -1,4 +1,3 @@
-from .main import main
-from .utils import seed_everything
-
-from . import datamodules
+from .main import main  # noqa
+from .utils import seed_everything  # noqa
+from . import datamodules  # noqa

@@ -102,7 +102,7 @@ class TestEvalWhisper(unittest.TestCase):
 
         # check the content of the `gender.txt` file
         with open(self.datafile) as f:
-            sample_genders = [json.loads(l)["gender"] for l in f]
+            sample_genders = [json.loads(line)["gender"] for line in f]
 
         with open(os.path.join(self.results_dir, "gender.txt")) as f:
             gender_results = [line.split() for line in f.readlines()]

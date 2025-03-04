@@ -1,14 +1,12 @@
 import os
 import json
 import logging
-from typing import TextIO
 from copy import deepcopy
 
 import torch
-from torch import Tensor
 from torch.cuda import OutOfMemoryError
 import torchaudio
-from omegaconf import OmegaConf, DictConfig
+from omegaconf import DictConfig
 from tqdm import tqdm
 
 from spkanon_eval.datamodules import eval_dataloader, sort_datafile

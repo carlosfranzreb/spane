@@ -361,7 +361,7 @@ class ProsodyEmbedding(InferComponent):
                     f0_tilt,
                     duration_tilt,
                 ]
-            except Exception as e:
+            except Exception:
                 return [0, 0, 0, 0, 0]
 
         def aggregate_energy(self, values):
@@ -383,7 +383,7 @@ class ProsodyEmbedding(InferComponent):
                     np.mean(log_values),
                     delta_log_e,
                 ]
-            except Exception as e:
+            except Exception:
                 return [0, 0, 0, 0, 0, 0]
 
         # aggregation function of the features
@@ -446,9 +446,6 @@ class ProsodyEmbedding(InferComponent):
             final_embedding = np.nan_to_num(final_embedding, nan=0.0)
 
         elif segmentation_method == "relative":
-            if self.feature_segments is None:
-                feature_segments = self.feature_segments
-
             segments = self.segment_audio(audio)
             all_features = []
             aggregator = self.Aggregation()

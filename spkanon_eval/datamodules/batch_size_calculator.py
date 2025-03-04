@@ -11,7 +11,6 @@ from math import ceil
 
 import torch
 from torch.cuda import OutOfMemoryError
-from torch import Tensor
 import torchaudio
 from tqdm import tqdm
 
@@ -103,14 +102,14 @@ class BatchSizeCalculator:
                         break
                 if found:
                     continue
-            
+
             # gather enough audio for the current chunk size
             chunk_max_dur = torch.ceil(chunk_max_dur).item()
             n_samples = int(chunk_max_dur * sample_rate)
             if n_samples < audio.shape[0]:
                 audio_chunk = audio[:n_samples].clone()
             else:
-                n_repeats = n_samples // audio.shape[0] + 1 
+                n_repeats = n_samples // audio.shape[0] + 1
                 audio_chunk = audio.repeat(n_repeats)[:n_samples]
 
             # compute the batch size for the current max. duration

@@ -34,6 +34,7 @@ This phase requires a dataset different from the one used for evaluation.
 import os
 import pickle
 import logging
+import copy
 
 import numpy as np
 import plda

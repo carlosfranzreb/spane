@@ -97,7 +97,9 @@ class Whisper(InferComponent, EvalComponent):
                 n_edits, n_words, wer = compute_edits(normalizer(text_pred), text_ref)
                 # if wer could not be computed, skip
                 if n_words == 0:
-                    LOGGER.warn(f"Reference text of {audiofile} has no words; WER = 0")
+                    LOGGER.warning(
+                        f"Reference text of {audiofile} has no words; WER = 0"
+                    )
                 # dump the results for this sample into the datafile
                 with open(dump_file, "a", encoding="utf-8") as f:
                     f.write(f"{audiofile} {n_edits} {n_words} {wer} {text_pred}\n")
@@ -124,14 +126,17 @@ def compute_edits(text_pred, text_ref):
     Normalize the texts, split them into words and compute the Levenhstein
     distance between the lists of words. Return the edit distance, the number of words
     of `text_ref` (which we assume is the reference) and the WER.
-    If the reference text has no words, return all zeros so that the analysis may
-    be run.
+    The max. WER is 1. If the reference text has no words, return all zeros so that the
+    analysis may be run.
     """
     text_pred = normalize_text(text_pred)
     text_ref = normalize_text(text_ref)
     n_edits = editdistance.eval(text_pred, text_ref)
     if len(text_ref) > 0:
-        return n_edits, len(text_ref), round(n_edits / len(text_ref), 2)
+        n_words_ref = len(text_ref)
+        if n_edits > n_words_ref:
+            n_edits = n_words_ref
+        return n_edits, n_words_ref, round(n_edits / n_words_ref, 2)
     else:
         return 0, 0, 0
 

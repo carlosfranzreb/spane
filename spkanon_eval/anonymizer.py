@@ -23,7 +23,7 @@ class Anonymizer:
             if cfg is not None:
                 setattr(self, module, setup(cfg, self.device))
             else:
-                setattr(self, module, None)
+                setattr(self, str(module), None)
 
         # if possible, get the output of the featproc module
         if self.featproc is not None:
@@ -31,15 +31,23 @@ class Anonymizer:
 
         # if there is a target selection algorithm, pass it to the right component
         target_selection_cfg = config.get("target_selection", None)
-        if target_selection_cfg is not None and self.featproc is not None:
+        if target_selection_cfg is not None:
+
             args = [target_selection_cfg]
             if hasattr(target_selection_cfg, "extra_args"):
                 for arg in target_selection_cfg.extra_args:
                     args.append(getattr(self, arg))
-            for name, component in self.featproc.items():
-                if hasattr(component, "target_selection"):
-                    LOGGER.info(f"Passing target selection algorithm to {name}")
-                    component.init_target_selection(*args)
+
+            for module in [self.featproc, self.synthesis]:
+                if module is None:
+                    continue
+                if not isinstance(module, dict):
+                    module = {"synthesis": module}
+                for name, component in module.items():
+                    if hasattr(component, "target_selection"):
+                        LOGGER.info(f"Passing target selection algorithm to {name}")
+                        component.init_target_selection(*args)
+                        return
 
     def get_feats(self, batch: list, source_is_male: Tensor) -> dict:
         """
@@ -83,8 +91,15 @@ class Anonymizer:
 
         with torch.no_grad():
             out = self.get_feats(batch, source_is_male)
-            waves, n_samples = self.synthesis.run(out)
-        return waves, n_samples, out["target"]
+            synthesis_out = self.synthesis.run(out)
+
+        if len(synthesis_out) == 3:
+            audios, audio_lens, target = synthesis_out
+        else:
+            audios, audio_lens = synthesis_out
+            target = out["target"]
+
+        return audios, audio_lens, target
 
     def _run_module(self, module: dict, batch: list) -> dict:
         """
@@ -127,7 +142,7 @@ class Anonymizer:
                     component.to(device)
         self.synthesis.to(device)
         self.device = device
-    
+
     def reset(self) -> None:
         """
         Propagate reset() to all the components that have it. This is used to recover
@@ -140,4 +155,4 @@ class Anonymizer:
 
             for component in module.values():
                 if hasattr(component, "reset"):
-                    component.reset()    
+                    component.reset()

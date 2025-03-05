@@ -1,10 +1,7 @@
 import os
 import logging
 import shutil
-import random
 
-import numpy as np
-import torch
 from omegaconf import OmegaConf
 
 from spkanon_eval.anonymizer import Anonymizer

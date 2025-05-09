@@ -290,8 +290,8 @@ def max_batch_size(model, input_size, device):
                     LOGGER.info(f"OOM with step size 1. final batch size {batch_size}")
                     break
                 else:
-                    batch_size -= step_size
                     step_size = int(step_size / 2)
+                    batch_size -= step_size
                     LOGGER.info(f"OOM. Step size to {step_size}")
                     continue
             else:

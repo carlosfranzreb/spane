@@ -46,7 +46,7 @@ class PerformanceEvaluator(EvalComponent):
                 run_gpu,
                 self.config.repetitions,
                 self.config.durations,
-                self.config.sample_rate,
+                self.config.data.config.sample_rate_in,
             )
             LOGGER.info("Evaluating the GPU throughput")
             gpu_throughput(
@@ -54,7 +54,7 @@ class PerformanceEvaluator(EvalComponent):
                 os.path.join(dump_folder, "gpu_throughput.txt"),
                 self.config.repetitions,
                 self.config.durations,
-                self.config.sample_rate,
+                self.config.data.config.sample_rate_in,
             )
 
         # write the model's CPU specs to the experiment folder
@@ -77,7 +77,7 @@ class PerformanceEvaluator(EvalComponent):
             run_cpu,
             self.config.repetitions,
             self.config.durations,
-            self.config.sample_rate,
+            self.config.data.config.sample_rate_in,
         )
 
         # reset the model to its original device
@@ -117,7 +117,7 @@ def inference_time(model, dump_file, func, repetitions, durations, sample_rate):
 
 def gpu_throughput(model, dump_file, repetitions, durations, sample_rate):
     """
-    Computes the throughput of the model on CPU for inputs of
+    Computes the throughput of the model on GPU for inputs of
     different durations, writing the results to `dump_file`.
 
     - `model` is a PyTorch model with a `forward` method that receives a batch from a
@@ -266,10 +266,13 @@ def max_batch_size(model, input_size, device):
         print(max_size)
     """
 
-    batch_size = 1
+    step_size = 40
+    batch_size = step_size
     while batch_size > 0:
         try:
+            LOGGER.info(f"Trying batch size {batch_size}")
             # batch comprises a signal, a speaker label and the audio length
+            torch.cuda.synchronize()
             size = (batch_size, input_size)
             batch = [
                 torch.randn(size, dtype=torch.float).to("cuda"),
@@ -278,14 +281,22 @@ def max_batch_size(model, input_size, device):
             ]
             data = [{"speaker_id": 1} for _ in range(size[0])]
             model.forward(batch, data)
-            batch_size += 1
-            torch.cuda.synchronize()
+            batch_size += step_size
+
         except RuntimeError as err:
             if "out of memory" in str(err):
-                batch_size -= 1
-                break
+                if step_size == 1:
+                    batch_size -= 1
+                    LOGGER.info(f"OOM with step size 1. final batch size {batch_size}")
+                    break
+                else:
+                    batch_size -= step_size
+                    step_size = int(step_size / 2)
+                    LOGGER.info(f"OOM. Step size to {step_size}")
+                    continue
             else:
                 raise err
 
     torch.cuda.synchronize()
+    LOGGER.info(f"Returning batch size {batch_size}")
     return batch_size

@@ -81,12 +81,6 @@ class Anonymizer:
                 [d["gender"] == "M" for d in data], dtype=torch.bool, device=self.device
             )
         else:
-            LOGGER.warning(
-                """
-                gender information not found in the data. Make sure it is not
-                considered for target selection.
-                """
-            )
             source_is_male = torch.zeros_like(batch[1], dtype=torch.bool)
 
         with torch.no_grad():

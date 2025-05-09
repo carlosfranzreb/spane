@@ -50,7 +50,7 @@ def split_trials_enrolls(
     datafile = os.path.join(exp_folder, "data", "eval.txt")
     f_trials = os.path.join(exp_folder, "data", "eval_trials.txt")
     f_enrolls = os.path.join(exp_folder, "data", "eval_enrolls.txt")
-    
+
     if os.path.exists(f_trials):
         LOGGER.warning("Datafile splits into trial and enrolls already exist, skipping")
         return f_trials, f_enrolls
@@ -61,7 +61,7 @@ def split_trials_enrolls(
         for line in open(anon_datafile):
             obj = json.loads(line.strip())
             fname = os.path.splitext(os.path.basename(obj["path"]))[0]
-            anon_data[fname] = line            
+            anon_data[fname] = line
     else:
         anon_datafile = None
 
@@ -115,7 +115,7 @@ def split_trials_enrolls(
             spk_objs.append(obj)
 
         split_speaker(spk_objs, f_trials, f_enrolls, anon_folder, root_folder)
-    
+
     # sort the files according to their duration
     sort_datafile(f_trials)
     sort_datafile(f_enrolls)

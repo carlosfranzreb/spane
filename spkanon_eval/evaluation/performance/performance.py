@@ -3,17 +3,21 @@ import logging
 import time
 import sys
 
+import torchaudio
 import torch
 import numpy as np
+from omegaconf import DictConfig
+from tqdm import tqdm
 
 from spkanon_eval.component_definitions import EvalComponent
-
+from spkanon_eval.datamodules.batch_size_calculator import max_batch_size, map_audio_to_dur
+from spkanon_eval.anonymizer import Anonymizer
 
 LOGGER = logging.getLogger("progress")
 
 
 class PerformanceEvaluator(EvalComponent):
-    def __init__(self, config, device, model):
+    def __init__(self, config: DictConfig, device: str, model: Anonymizer):
         self.config = config
         self.device = device
         self.model = model
@@ -23,7 +27,7 @@ class PerformanceEvaluator(EvalComponent):
 
     def eval_dir(self, exp_folder: str, *args) -> None:
         """
-        Measure the inference time and throughput of the model, on GPU and CPU.
+        Measure the inference time on GPU and CPU.
 
         Args:
             exp_folder: path to the experiment folder
@@ -44,14 +48,6 @@ class PerformanceEvaluator(EvalComponent):
                 self.model,
                 os.path.join(dump_folder, f"{device}_inference.txt"),
                 run_gpu,
-                self.config.repetitions,
-                self.config.durations,
-                self.config.data.config.sample_rate_in,
-            )
-            LOGGER.info("Evaluating the GPU throughput")
-            gpu_throughput(
-                self.model,
-                os.path.join(dump_folder, "gpu_throughput.txt"),
                 self.config.repetitions,
                 self.config.durations,
                 self.config.data.config.sample_rate_in,
@@ -84,7 +80,14 @@ class PerformanceEvaluator(EvalComponent):
         self.model.to(self.device)
 
 
-def inference_time(model, dump_file, func, repetitions, durations, sample_rate):
+def inference_time(
+    model: Anonymizer,
+    dump_file: str,
+    func,
+    repetitions: int,
+    durations: list[int],
+    sample_rate: int,
+):
     """
     Computes the mean and std inference time of the model on `device` for inputs of
     different durations, writing the results to `dump_file`.
@@ -104,9 +107,14 @@ def inference_time(model, dump_file, func, repetitions, durations, sample_rate):
     with open(dump_file, "w") as f:
         f.write("input_duration inference_mean inference_std\n")
 
+    audio = torchaudio.load(
+        "spkanon_eval/tests/data/LibriSpeech/dev-clean-2/2412/153948/2412-153948-0000.flac"
+    )[0].squeeze()
+
     for duration in durations:
-        n_frames = int(sample_rate * duration)
-        timings = func(model, repetitions, (1, n_frames))
+        n_samples = int(sample_rate * duration)
+        audio_chunk = map_audio_to_dur(audio, n_samples)
+        timings = func(model, audio, 1, repetitions)
 
         # dump the mean and std of the inference time
         with open(dump_file, "a") as f:
@@ -115,55 +123,18 @@ def inference_time(model, dump_file, func, repetitions, durations, sample_rate):
             f.write(f" {np.round(np.std(timings), 3)}\n")
 
 
-def gpu_throughput(model, dump_file, repetitions, durations, sample_rate):
-    """
-    Computes the throughput of the model on GPU for inputs of
-    different durations, writing the results to `dump_file`.
-
-    - `model` is a PyTorch model with a `forward` method that receives a batch from a
-        dataloader (signal, label) and a target ID for each sample in the batch.
-    - `dump_file` (str): path to the file where the results are written.
-    - `repetitions` (int): number of times the batch is passed to the model.
-    - `durations` (list of ints): durations (in seconds) for which to perform the
-        experiment.
-    - `sample_rate` (int): sample rate of the model.
-    """
-
-    # write the headers to the dump file
-    with open(dump_file, "w") as f:
-        f.write("input_duration max_batch_size throughput\n")
-
-    for duration in durations:
-        n_frames = int(sample_rate * duration)
-        batch_size = max_batch_size(model, n_frames, "cuda")
-        if batch_size == 0:
-            throughput = "OOM_error"
-        else:
-            try:
-                timings = run_gpu(model, repetitions, (batch_size, n_frames))
-                total_time = np.sum(timings)
-                throughput = round((repetitions * batch_size) / total_time, 3)
-            except RuntimeError as err:
-                if "out of memory" in str(err):
-                    throughput = "OOM_error"
-                    break
-                else:
-                    raise err
-
-        # dump the batch size and the throughput
-        with open(dump_file, "a") as f:
-            f.write(f"{duration} {batch_size} {throughput}\n")
-
-
-def run_gpu(model, repetitions, size):
+def run_gpu(
+    model: Anonymizer, audio: torch.Tensor, batch_size: int, repetitions: int
+) -> np.ndarray:
     """
     Runs a given model on GPU with the specified input size for the specified number of
     repetitions.
 
     Args:
-        model (torch.nn.Module): The model to run on GPU.
-        repetitions (int): The number of times to repeat the model execution.
-        size (tuple): The size of the input batch. Should be a tuple of integers.
+        model: The anonymizer model to run on GPU.
+        audio: real audio to use in the batch, of shape (n_samples,)
+        batch_size: no. of samples to include in the batch
+        repetitions: no. of times to repeat the model execution.
 
     Returns:
         numpy.ndarray: A 2D array containing the execution timings of the model in
@@ -176,42 +147,51 @@ def run_gpu(model, repetitions, size):
         print(timings)
     """
 
-    # batch comprises a signal, a speaker label and the audio length
-    batch = [
-        torch.randn(size, dtype=torch.float).to("cuda"),
-        torch.ones(size[0]),
-        torch.ones(size[0], dtype=torch.int32) * size[-1],
-    ]
-    data = [{"speaker_id": 1} for _ in range(size[0])]
-
-    starter = torch.cuda.Event(enable_timing=True)
-    ender = torch.cuda.Event(enable_timing=True)
-    timings = np.zeros((repetitions, 1))
-
     with torch.no_grad():
-        # GPU-WARM-UP
+
+        # batch comprises a signal, a speaker label and the audio length
+        audio_batch = audio.unsqueeze(0).repeat(batch_size, 1)
+        batch = [
+            audio_batch.to(model.device),
+            torch.randint(10, [batch_size], device=model.device),
+            torch.ones(batch_size, device=model.device, dtype=torch.int32)
+            * audio.shape[0],
+        ]
+        data = [
+            {"speaker_id": val.item(), "gender": True}
+            for val in batch[1]
+        ]
+
+        # warm-up
         for _ in range(10):
             model.forward(batch, data)
 
-        for i in range(repetitions):
+        starter = torch.cuda.Event(enable_timing=True)
+        ender = torch.cuda.Event(enable_timing=True)
+        timings = np.zeros((repetitions, 1))
+
+        for idx in tqdm(range(repetitions)):
             starter.record()
             model.forward(batch, data)
             ender.record()
             torch.cuda.synchronize()
-            timings[i] = starter.elapsed_time(ender) / 1000
+            timings[idx] = starter.elapsed_time(ender) / 1000
 
     return timings
 
 
-def run_cpu(model, repetitions, size):
+def run_cpu(
+    model: Anonymizer, audio: torch.Tensor, batch_size: int, repetitions: int
+) -> np.ndarray:
     """
     Runs a given model on CPU with the specified input size for the specified number of
     repetitions.
 
     Args:
-        model (torch.nn.Module): The model to run on CPU.
-        repetitions (int): The number of times to repeat the model execution.
-        size (tuple): The size of the input batch. Should be a tuple of integers.
+        model: The anonymizer model to run on GPU.
+        audio: real audio to use in the batch, of shape (n_samples,)
+        batch_size: no. of samples to include in the batch
+        repetitions: no. of times to repeat the model execution.
 
     Returns:
         numpy.ndarray: A 2D array containing the execution timings of the model in
@@ -225,12 +205,20 @@ def run_cpu(model, repetitions, size):
     """
 
     # batch comprises a signal, a speaker label and the audio length
+    audio_batch = audio.unsqueeze(0).repeat(batch_size, 1)
     batch = [
-        torch.randn(size, dtype=torch.float).to("cpu"),
-        torch.ones(size[0]),
-        torch.ones(size[0], dtype=torch.int32) * size[-1],
+        audio_batch.to(model.device),
+        torch.randint(10, [batch_size], device=model.device),
+        torch.ones(batch_size, device=model.device, dtype=torch.int32) * audio.shape[0],
     ]
-    data = [{"speaker_id": 1} for _ in range(size[0])]
+    data = [
+        {"speaker_id": val.item(), "gender": True}
+        for val in batch[1]
+    ]
+
+    # warm-up
+    for _ in range(10):
+        model.forward(batch, data)
 
     timings = np.zeros((repetitions, 1))
     with torch.no_grad():
@@ -240,63 +228,3 @@ def run_cpu(model, repetitions, size):
             timings[i] = time.time() - start_time
 
     return timings
-
-
-def max_batch_size(model, input_size, device):
-    """
-    Determines the maximum batch size that can fit in the GPU memory for a given model
-    and input size.
-
-    Args:
-        model (torch.nn.Module): The model to evaluate batch size for.
-        size (int): The size of the input tensor (excluding batch dimension).
-        device (str or torch.device): The device to run the evaluation on (e.g.,
-            "cuda", "cuda:0", torch.device("cuda")).
-
-    Returns:
-        int: The maximum batch size that can fit in the GPU memory.
-
-    Raises:
-        RuntimeError: If an error occurs during the evaluation.
-
-    Example:
-        # Create a model and determine the maximum batch size for an input size of 128
-        model = MyModel()
-        max_size = max_batch_size(model, 128, "cuda")
-        print(max_size)
-    """
-
-    step_size = 40
-    batch_size = step_size
-    while batch_size > 0:
-        try:
-            LOGGER.info(f"Trying batch size {batch_size}")
-            # batch comprises a signal, a speaker label and the audio length
-            torch.cuda.synchronize()
-            size = (batch_size, input_size)
-            batch = [
-                torch.randn(size, dtype=torch.float).to("cuda"),
-                torch.ones(size[0]),
-                torch.ones(size[0], dtype=torch.int32) * size[-1],
-            ]
-            data = [{"speaker_id": 1} for _ in range(size[0])]
-            model.forward(batch, data)
-            batch_size += step_size
-
-        except RuntimeError as err:
-            if "out of memory" in str(err):
-                if step_size == 1:
-                    batch_size -= 1
-                    LOGGER.info(f"OOM with step size 1. final batch size {batch_size}")
-                    break
-                else:
-                    step_size = int(step_size / 2)
-                    batch_size -= step_size
-                    LOGGER.info(f"OOM. Step size to {step_size}")
-                    continue
-            else:
-                raise err
-
-    torch.cuda.synchronize()
-    LOGGER.info(f"Returning batch size {batch_size}")
-    return batch_size

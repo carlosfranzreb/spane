@@ -103,13 +103,10 @@ class ASV(EvalComponent):
             LOGGER.info(f"Anonymizing training data: {datafile}")
             datafile = self.anonymize_data(exp_folder, "train_eval", False)
 
-        n_speakers = count_speakers(datafile)
-        LOGGER.info(f"Number of speakers in training file: {n_speakers}")
-
         # fine-tune SpkId model and store the ckpt if needed
         if self.config.spkid.train:
             self.spkid_model.train(
-                os.path.join(dump_dir, "spkid"), datafile, n_speakers
+                os.path.join(dump_dir, "spkid"), datafile, count_speakers(datafile)
             )
 
         # compute SpkId vectors of all utterances with spkid model and center them

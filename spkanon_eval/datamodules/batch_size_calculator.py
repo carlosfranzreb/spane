@@ -15,6 +15,7 @@ import torchaudio
 from tqdm import tqdm
 
 from spkanon_eval.utils import reset
+from spkanon_eval.anonymizer import Anonymizer
 
 LOGGER = logging.getLogger("progress")
 SIZE_INCREASE = 8  # min. increase of batch size
@@ -72,9 +73,6 @@ class BatchSizeCalculator:
         if first_time:
             self.chunks[model_key] = dict()
 
-        total_memory = torch.cuda.get_device_properties(0).total_memory
-        LOGGER.info(f"\tTarget GPU memory usage: {(total_memory / 1024 ** 2):.2f} MB")
-
         # load test audio used in the batches; e.g. needed for STT-TTS approach
         audio = torchaudio.load(
             "spkanon_eval/tests/data/LibriSpeech/dev-clean-2/2412/153948/2412-153948-0000.flac"
@@ -86,10 +84,6 @@ class BatchSizeCalculator:
         for chunk_max_dur in tqdm(
             torch.linspace(max_dur, min_dur, self.n_chunks + 1)[:-1]
         ):
-
-            # reset batch size to the last value that worked for the larger chunk size
-            if len(out_sizes) > 0:
-                batch_size = list(out_sizes.values())[-1] + SIZE_INCREASE
 
             # check if the chunk size has already been computed
             if not first_time:
@@ -103,55 +97,77 @@ class BatchSizeCalculator:
                 if found:
                     continue
 
+            # reset batch size to the last value that worked for the larger chunk size
+            if len(out_sizes) > 0:
+                batch_size = list(out_sizes.values())[-1] + SIZE_INCREASE
+            else:
+                batch_size = 1
+
             # gather enough audio for the current chunk size
             chunk_max_dur = torch.ceil(chunk_max_dur).item()
             n_samples = int(chunk_max_dur * sample_rate)
-            if n_samples < audio.shape[0]:
-                audio_chunk = audio[:n_samples].clone()
-            else:
-                n_repeats = n_samples // audio.shape[0] + 1
-                audio_chunk = audio.repeat(n_repeats)[:n_samples]
+            audio_chunk = map_audio_to_dur(audio, n_samples)
 
-            # compute the batch size for the current max. duration
-            while True:
-                audio_batch = audio_chunk.unsqueeze(0).repeat(batch_size, 1)
-                batch = [
-                    audio_batch.to(model.device),
-                    torch.randint(10, [batch_size], device=model.device),
-                    torch.ones(batch_size, device=model.device, dtype=torch.int32)
-                    * n_samples,
-                ]
-                torch.cuda.reset_peak_memory_stats()
-                try:
-                    if hasattr(model, "forward"):
-                        data = [
-                            {"speaker_id": val.item(), "gender": True}
-                            for val in batch[1]
-                        ]
-                        model.forward(batch, data)
-                    else:
-                        with torch.no_grad():
-                            model.run(batch)
-
-                    out_sizes[chunk_max_dur] = batch_size
-                    self.chunks[model_key][chunk_max_dur] = batch_size
-                    max_usage = torch.cuda.max_memory_allocated()
-                    batch_size = max(
-                        batch_size + SIZE_INCREASE,
-                        int(batch_size * (total_memory / max_usage)),
-                    )
-
-                except OutOfMemoryError:
-                    reset(model)
-                    break
-                except RuntimeError as error:
-                    if "must fit into 32-bit index math" in str(error):
-                        reset(model)
-                        break
-                    else:
-                        LOGGER.error(error)
-                        raise error
+            # estimate the max. batch size
+            batch_size = max_batch_size(model, audio_chunk, batch_size)
+            out_sizes[chunk_max_dur] = batch_size
+            self.chunks[model_key][chunk_max_dur] = batch_size
 
         out_sizes = {k: int(v * max_ratio) for k, v in out_sizes.items()}
         LOGGER.info(f"\tComputed chunk sizes: {out_sizes}")
         return out_sizes
+
+
+def map_audio_to_dur(audio: torch.Tensor, n_samples: int) -> torch.Tensor:
+    """Extend by repeating or clip the audio to match the given number of samples."""
+    # gather enough audio for the current chunk size
+    if n_samples < audio.shape[0]:
+        return audio[:n_samples].clone()
+    else:
+        n_repeats = n_samples // audio.shape[0] + 1
+        return audio.repeat(n_repeats)[:n_samples]
+
+
+def max_batch_size(model: Anonymizer, audio: torch.Tensor, batch_size: int = 1) -> int:
+    """Estimate the max. batch size for the given audio tensor."""
+    total_memory = torch.cuda.get_device_properties(0).total_memory
+    out_size = 1
+    
+    while True:
+        audio_batch = audio.unsqueeze(0).repeat(batch_size, 1)
+        batch = [
+            audio_batch.to(model.device),
+            torch.randint(10, [batch_size], device=model.device),
+            torch.ones(batch_size, device=model.device, dtype=torch.int32)
+            * audio.shape[0],
+        ]
+        torch.cuda.reset_peak_memory_stats()
+        try:
+            if hasattr(model, "forward"):
+                data = [
+                    {"speaker_id": val.item(), "gender": True}
+                    for val in batch[1]
+                ]
+                model.forward(batch, data)
+            else:
+                with torch.no_grad():
+                    model.run(batch)
+
+            out_size = batch_size
+            max_usage = torch.cuda.max_memory_allocated()
+            batch_size = max(
+                batch_size + SIZE_INCREASE,
+                int(batch_size * (total_memory / max_usage)),
+            )
+
+        except OutOfMemoryError:
+            break
+        except RuntimeError as error:
+            if "must fit into 32-bit index math" in str(error):
+                break
+            else:
+                LOGGER.error(error)
+                raise error
+    
+    reset(model)
+    return out_size

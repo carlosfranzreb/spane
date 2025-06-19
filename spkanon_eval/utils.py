@@ -4,14 +4,16 @@ import inspect
 
 import numpy as np
 import torch
-from torch.cuda import empty_cache
+from torch.cuda import empty_cache, synchronize, reset_peak_memory_stats
 
 
 def reset(model):
     """Call the model's reset method if exists and empty CUDA cache and garbage."""
     if hasattr(model, "reset"):
         model.reset()
+        synchronize()
         empty_cache()
+        reset_peak_memory_stats()
         collect()
 
 

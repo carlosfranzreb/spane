@@ -3,7 +3,6 @@ import string
 import logging
 
 import whisper
-from whisper.normalizers import EnglishTextNormalizer
 import torch
 import editdistance
 import numpy as np
@@ -76,7 +75,6 @@ class Whisper(InferComponent, EvalComponent):
         LOGGER.info("Computing WER of eval data with dataloader")
         if self.config.output != "text":
             self.config.output = "text"
-        normalizer = EnglishTextNormalizer()
         dump_folder = os.path.join(exp_folder, "eval", f"whisper-{self.config.size}")
         os.makedirs(dump_folder, exist_ok=True)
         stats = {"n_edits": list(), "n_words_ref": list()}
@@ -94,7 +92,7 @@ class Whisper(InferComponent, EvalComponent):
                 # compute the WER for the current sample
                 audiofile = sample_data[i]["path"]
                 text_ref = sample_data[i]["text"]
-                n_edits, n_words, wer = compute_edits(normalizer(text_pred), text_ref)
+                n_edits, n_words, wer = compute_edits(text_pred, text_ref)
                 # if wer could not be computed, skip
                 if n_words == 0:
                     LOGGER.warning(

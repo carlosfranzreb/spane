@@ -2,7 +2,7 @@ import os
 import logging
 import shutil
 
-from omegaconf import OmegaConf
+from omegaconf import DictConfig
 
 from spkanon_eval.anonymizer import Anonymizer
 from spkanon_eval.inference import infer
@@ -13,7 +13,7 @@ from spkanon_eval.datamodules import prepare_datafile
 LOGGER = logging.getLogger("progress")
 
 
-def main(config: OmegaConf, exp_folder: str):
+def main(config: DictConfig):
     """Run the jobs (training, inference, evaluation) as specified in the config."""
 
     # Otherwise SB assumes we are running a distributed job
@@ -21,6 +21,7 @@ def main(config: OmegaConf, exp_folder: str):
         del os.environ["LOCAL_RANK"]
 
     target_df = config.data.datasets.get("targets", list())
+    exp_folder = config.exp_folder
     if len(target_df) > 0:
         prepare_datafile("targets", config, exp_folder)
 

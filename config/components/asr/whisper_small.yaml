@@ -3,4 +3,3 @@ whisper_small:
   train: false
   size: small # can be: tiny, base, small, medium, large
   output: text # can be text or encoding
-  batch_size: 8

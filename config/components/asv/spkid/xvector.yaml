@@ -1,7 +1,6 @@
 spkid:
   cls: spkanon_eval.featex.SpkId # cls that extracts this feature
   path: speechbrain/spkrec-xvect-voxceleb # path to ckpt or name of pretrained model
-  batch_size: 8
   num_workers: ${data.config.num_workers}
   train_config: spkanon_eval/config/components/spkid/train_xvec.yaml
   emb_model_ckpt: ${eval.config.spkid_emb_model_ckpt} # path to ckpt of embedding model

@@ -24,14 +24,11 @@ LOGGER = logging.getLogger("progress")
 class EmotionEvaluator(InferComponent, EvalComponent):
     def __init__(self, config, device, **kwargs):
         self.config = config
+        self.config.data.config.sample_rate_out = SAMPLE_RATE
         self.device = device
         self.processor = Wav2Vec2Processor.from_pretrained(config.init)
         self.model = EmotionModel.from_pretrained(config.init).to(device)
         self.model.eval()
-
-        # prepare the config for the dataloader
-        self.config.data.config.batch_size = config.batch_size
-        self.config.data.config.sample_rate = SAMPLE_RATE
 
     def to(self, device):
         self.device = device
@@ -58,15 +55,15 @@ class EmotionEvaluator(InferComponent, EvalComponent):
         Args:
             exp_folder: path to the experiment folder
             datafile: datafile to evaluate
-            is_baseline: whether the baseline is being evaluated
+            is_baseline: whether original data is being evaluated. If not, we compare
+                the anonymized samples with their original counterparts.
         """
         eval_dir = "ser-audeering-w2v"
         if is_baseline:
             eval_dir += "-baseline"
-        dump_folder = os.path.join(exp_folder, "eval", eval_dir)
 
+        dump_folder = os.path.join(exp_folder, "eval", eval_dir)
         os.makedirs(dump_folder, exist_ok=True)
-        root_folder = os.path.join(exp_folder, "results")
 
         # init the lists that will store the results to be analysed later
         dims = {"arousal": [], "dominance": [], "valence": []}
@@ -107,9 +104,11 @@ class EmotionEvaluator(InferComponent, EvalComponent):
             # compute the emotion dimensions of the original audio
             audios_x = list()
             for s in sample_data:
-                audio, sr = torchaudio.load(
-                    s["path"].replace(f"./{exp_folder}/results", root_folder)
-                )
+                f_anon = s["path"]
+                anon_folder_end = f_anon.index("/results/eval")
+                anon_folder = f_anon[:anon_folder_end] + "/results/eval"
+                f_orig = f_anon.replace(anon_folder, self.config.root_folder)
+                audio, sr = torchaudio.load(f_orig)
                 audios_x.append(audio.squeeze())
 
             if sr != SAMPLE_RATE:

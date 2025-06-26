@@ -90,6 +90,7 @@ def get_utt_info(filename):
         "text": STATEMENTS[data[4]],
         "utt_text": STATEMENTS[data[4]].split()[0],
         "utt_repetition": REPETITIONS[data[5]],
+        "dataset": "ravdess"
     }
 
 
@@ -97,10 +98,10 @@ if __name__ == "__main__":
     # define and parse the arguments
     parser = ArgumentParser()
     parser.add_argument(
-        "--folder", help="Path to the RAVDESS folder (Audio_Speech_Actors_01-24)"
+        "folder", help="Path to the RAVDESS folder (Audio_Speech_Actors_01-24)"
     )
-    parser.add_argument("--dump_file", help="Path to the dump file (TXT)")
-    parser.add_argument("--root_folder", help="Path that will be replaced with {root}")
+    parser.add_argument("dump_file", help="Path to the dump file (TXT)")
+    parser.add_argument("root_folder", help="Path that will be replaced with {root}")
     args = parser.parse_args()
 
     # run the script

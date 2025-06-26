@@ -16,6 +16,7 @@ import json
 from argparse import ArgumentParser
 import logging
 import time
+import re
 
 import pandas
 import torchaudio
@@ -24,7 +25,9 @@ import torchaudio
 SAMPLE_RATE = 32000
 
 
-def create_file(folder, subset, dump_file, root_folder, max_duration=None):
+def create_file(
+    folder, subset, dump_file, root_folder, max_duration=None, min_duration=None
+):
     """
     - We remove the samples that are longer than the max. duration, defined by the
         max_duration parameter.
@@ -79,9 +82,12 @@ def create_file(folder, subset, dump_file, root_folder, max_duration=None):
             conv_file = os.path.join(folder, "data", conv_id + ".wav")
             duration = float(end) - float(start)
 
-            # skip samples that are too long if necessary
+            # skip samples that are not of the required duration
             if max_duration is not None and duration > max_duration:
-                logging.warn(f"Skipping utterance {utt_id} because it is too long")
+                logging.warning(f"Skipping utterance {utt_id} because it is too long")
+                continue
+            if min_duration is not None and duration < min_duration:
+                logging.warning(f"Skipping utterance {utt_id} because it is too short")
                 continue
 
             # extract the utterance from the conversation and dump it
@@ -114,7 +120,7 @@ def create_file(folder, subset, dump_file, root_folder, max_duration=None):
                     "path": utt_file.replace(root_folder, "{root}"),
                     "label": spk,
                     "duration": round(duration, 2),
-                    "text": texts[utt_id],
+                    "text": normalize_text(texts[utt_id]),
                     "gender": speaker_info.iloc[0, 5],
                     "age": current_year - int(speaker_info.iloc[0, 6]),
                     "ethnicity": speaker_info.iloc[0, 7],
@@ -122,12 +128,26 @@ def create_file(folder, subset, dump_file, root_folder, max_duration=None):
                     "accent": speaker_info.iloc[0, 19],
                     "n_languages": n_languages,
                     "start_english_age": start_english_age,
+                    "dataset": "edacc",
                 }
                 writer.write(json.dumps(obj) + "\n")
             except RuntimeError as err:
                 logging.error(f"Error while processing utterance {utt_id}:")
                 logging.error(err)
     writer.close()
+
+
+def normalize_text(text: str) -> str:
+    """
+    Removes:
+
+    - tags enclosed by <>
+    - (())
+    """
+    text = re.sub(r'<[^>]*>', '', text)
+    text = text.replace("(())", "")
+    text = text.replace("  ", " ")
+    return text.strip()
 
 
 def get_speaker_data(spk_id, speakers_file):
@@ -149,6 +169,7 @@ def get_speaker_data(spk_id, speakers_file):
 
 if __name__ == "__main__":
     # configure logging with timestamp and level and dump to logs/create_dataset/{timestamp}.log
+    os.makedirs(os.path.join("logs", "create_dataset"), exist_ok=True)
     logging.basicConfig(
         filename=os.path.join(
             "logs", "create_dataset", f"edacc_{int(time.time())}.log"
@@ -160,19 +181,30 @@ if __name__ == "__main__":
 
     # define and parse the arguments
     parser = ArgumentParser()
-    parser.add_argument("--folder", help="Path to the EdAcc folder")
-    parser.add_argument("--subset", help="Subset to process (dev or test)")
-    parser.add_argument("--dump_file", help="Path to the dump file (TXT)")
-    parser.add_argument("--root_folder", help="Path that will be replaced with {root}")
+    parser.add_argument("folder", help="Path to the EdAcc folder")
+    parser.add_argument("subset", help="Subset to process (dev or test)")
+    parser.add_argument("dump_file", help="Path to the dump file (TXT)")
+    parser.add_argument("root_folder", help="Path that will be replaced with {root}")
     parser.add_argument(
         "--max_duration",
         type=int,
-        help="Min. no. of utterances per speaker",
+        help="Max. utterance duration in seconds",
+        default=None,
+    )
+    parser.add_argument(
+        "--min_duration",
+        type=int,
+        help="Min. utterance duration in seconds",
         default=None,
     )
     args = parser.parse_args()
 
     # run the script
     create_file(
-        args.folder, args.subset, args.dump_file, args.root_folder, args.max_duration
+        args.folder,
+        args.subset,
+        args.dump_file,
+        args.root_folder,
+        args.max_duration,
+        args.min_duration,
     )

@@ -49,6 +49,7 @@ def create_file(folder, dump_file, root_folder):
                             "duration": audio.shape[1] / sample_rate,
                             "label": spk_id,
                             "gender": genders[spk_id],
+                            "dataset": "libritts",
                         }
                     )
                     + "\n"
@@ -58,8 +59,8 @@ def create_file(folder, dump_file, root_folder):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--folder")
-    parser.add_argument("--dump_file")
-    parser.add_argument("--root_folder")
+    parser.add_argument("folder")
+    parser.add_argument("dump_file")
+    parser.add_argument("root_folder")
     args = parser.parse_args()
     create_file(args.folder, args.dump_file, args.root_folder)

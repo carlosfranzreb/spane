@@ -21,6 +21,10 @@ def create_file(folder, dump_file, root_folder, max_duration):
     - We remove the samples that are longer than the max. duration, defined by the
         max_duration parameter.
     """
+
+    if max_duration is None:
+        max_duration = float("inf")
+
     # get the parent folder of the given folder
     speakers_file = os.path.join(os.path.dirname(folder), "SPEAKERS.TXT")
     # create a writer object for the dump file
@@ -48,6 +52,7 @@ def create_file(folder, dump_file, root_folder, max_duration):
                                         "duration": duration,
                                         "label": spk_id,
                                         "gender": get_gender(spk_id, speakers_file),
+                                        "dataset": "librispeech",
                                     }
                                 )
                                 + "\n"
@@ -65,9 +70,9 @@ def get_gender(spk_id, speakers_file):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--folder", help="Path to the LibriSpeech directory")
-    parser.add_argument("--dump_file", help="Path to the dump file")
-    parser.add_argument("--root_folder", help="Path that will be replaced with {root}")
+    parser.add_argument("folder", help="Path to the LibriSpeech directory")
+    parser.add_argument("dump_file", help="Path to the dump file")
+    parser.add_argument("root_folder", help="Path that will be replaced with {root}")
     parser.add_argument(
         "--max_duration", type=int, help="Min. no. of utterances per speaker"
     )

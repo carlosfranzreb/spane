@@ -72,16 +72,17 @@ def get_speaker_data(spk_id, speakers_file):
                     "gender": data[2],
                     "accent": data[3],
                     "region": data[4],
+                    "dataset": "vctk",
                 }
 
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--stargan_file", help="Path to the StarGAN file")
-    parser.add_argument("--vctk_folder", help="Path to the VCTK folder")
-    parser.add_argument("--microphone", help="Microphone ID (1 or 2)")
-    parser.add_argument("--dump_file", help="Path to the dump file (TXT)")
-    parser.add_argument("--root_folder", help="Path that will be replaced with {root}")
+    parser.add_argument("stargan_file", help="Path to the StarGAN file")
+    parser.add_argument("vctk_folder", help="Path to the VCTK folder")
+    parser.add_argument("microphone", help="Microphone ID (1 or 2)")
+    parser.add_argument("dump_file", help="Path to the dump file (TXT)")
+    parser.add_argument("root_folder", help="Path that will be replaced with {root}")
     args = parser.parse_args()
     create_file(
         args.stargan_file,

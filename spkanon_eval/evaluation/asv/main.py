@@ -133,10 +133,9 @@ class ASV(EvalComponent):
         self, vecs: dict, labels: dict, dump_folder: str, datafile: str
     ) -> None:
         """
-        Evaluate the ASV system on the given directory. Each pair of trial
-        and enrollment spkembs is given a log-likelihood ratio (LLR) by the
-        PLDA model. These LLRs are dumped, and the EER is computed in
-        `analyse_results`.
+        Evaluate the ASV system on the given directory. Each pair of trial and
+        enrollment spkembs is given a similarity score by the backend. These scores are
+        dumped, and the EER is computed in `analyse_results`.
         """
         for name in ["trials", "enrolls"]:
             vecs[name] -= self.train_mean_spkemb
@@ -217,7 +216,7 @@ class ASV(EvalComponent):
                 np.save(os.path.join(exp_folder, f"{name}_spkembs.npy"), vecs[name])
                 np.save(os.path.join(exp_folder, f"{name}_labels.npy"), labels[name])
 
-        # call the child class to perform the evaluation
+        # perform the evaluation
         self.evaluate(vecs, labels, dump_subfolder, datafile)
 
     def anonymize_data(

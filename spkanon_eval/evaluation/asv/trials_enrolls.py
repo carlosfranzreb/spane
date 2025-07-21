@@ -5,6 +5,8 @@ Helper functions related to splitting the data into trial and enrollment utteran
 import os
 import json
 import logging
+from typing import TextIO
+import random
 
 from spkanon_eval.datamodules import sort_datafile
 
@@ -17,22 +19,35 @@ def split_trials_enrolls(
     anonymized_enrolls: bool,
     root_folder: str = None,
     anon_folder: str = None,
+    trials: list = None,
     enrolls: list = None,
 ) -> tuple[str, str]:
     """
-    Split the evaluation data into trial and enrollment datafiles. The first utt of
-    each speaker is the trial utt, and the rest are enrollment utts. If the root folder
-    is given, it is replaced in the trial with the folder where the anonymized
-    evaluation data is stored (`exp_folder/results/anon_eval`). The root folder is None
-    if we are evaluating the baseline, where speech is not anonymized.
+    Split the evaluation data into trial and enrollment datafiles.
+
+    ## Splitting strategy
+
+    - If both trials and enrolls are passed, use them and discard the rest.
+    - If enrolls are passed, but not trials, every utterance that is not part of enrolls
+        is added to trials.
+    - If trials are passed but not enrolls, same as before but vice versa.
+    - If neither trials nor enrolls are passed, divide them 50/50 randomly.
+
+    ## Using anonymized data
+
+    If the root folder is passed, it is replaced in the trial with the folder where the
+    anonymized evaluation data is stored (`exp_folder/results/anon_eval`).
+    If `anonymized_enrolls` is True, the same is done for enrolls as well.
+    The root folder is None if we are evaluating the baseline, where speech is not anonymized.
 
     Args:
         exp_folder: path to the experiment folder.
         anonymized_enrolls: whether the anonymized or original versions of the enrollment
             utterances should be consider. Generally, this depends on whether they were
             anonymized with or without consistent targets in the inference run.
-        root_folder (optional): root folder of the data. If we are computing a baseline
-            with original data, this is null.
+        root_folder (optional): root folder of the original data. We use it to replace
+            the original path with the anonymized one.
+            If we are computing a baseline with original data, this is null.
         anon_folder (optional): folder where the anonymized evaluation data is stored.
             It it is not given, we assume that it is the same as the experiment folder.
         enrolls: list of files defining the enrollment data. Each of these files
@@ -55,84 +70,129 @@ def split_trials_enrolls(
         LOGGER.warning("Datafile splits into trial and enrolls already exist, skipping")
         return f_trials, f_enrolls
 
-    if root_folder is not None:
-        anon_datafile = os.path.join(exp_folder, "data", "anon_eval.txt")
-        anon_data = dict()
-        for line in open(anon_datafile):
-            obj = json.loads(line.strip())
-            fname = os.path.splitext(os.path.basename(obj["path"]))[0]
-            anon_data[fname] = line
-    else:
-        anon_datafile = None
-
+    anonymized_trials = True
     if root_folder is None:
+        anonymized_trials = False
         LOGGER.info("No root folder given: original trial data will be used.")
-
-    if anon_folder is None:
+    elif anon_folder is None:
         anon_folder = exp_folder
 
-    # if enrolls are given, use them to split the data
-    if enrolls is not None:
-        trial_writer = open(f_trials, "w")
-        enroll_writer = open(f_enrolls, "w")
-        enroll_fnames = list()
+    # create the file writers and define which data is anonymized
+    is_anonymized = {"trials": anonymized_trials, "enrolls": anonymized_enrolls}
+    splits = ["trials", "enrolls"]
+    writers = dict()
+    for split, split_dump_f in zip(splits, [f_trials, f_enrolls]):
+        writers[split] = open(split_dump_f, "w")
 
-        # gather the filenames of the enrollment data
-        for enroll_file in enrolls:
-            with open(enroll_file) as f:
-                for line in f:
-                    enroll_fnames.append(line.strip())
+    # gather the filenames of the trial and enrollment data, if any
+    fnames = dict()
+    writers = dict()
+    for split, split_files in zip(splits, [trials, enrolls]):
+        fnames[split] = list()
+        if split_files is not None:
+            for f in split_files:
+                fnames[split].extend([line.strip() for line in open(f)])
 
-        # split the data into trial and enrollment data
+    both_passed = trials and enrolls
+    one_passed = trials or enrolls
+
+    def write_line(split: str, line: str):
+        """
+        Write the line to the given split. If the split should be anonymized, replace the
+        original path with the anonymized one. For this we need `root_folder` and
+        `anon_folder`.
+
+        Args:
+            split: the split to which the line should be written (trials or enrolls).
+            line: the original line from the datafile that should be dumped.
+        """
+
+        # check that all the necessary arguments are present
+        if is_anonymized[split] and (not root_folder or not anon_folder):
+            error_msg = (
+                "`root_folder` and `anon_folder` are needed to find the anonymized path"
+            )
+            LOGGER.error(error_msg)
+            raise ValueError(error_msg)
+
+        # replace the original path with the anonymized ones if needed
+        if is_anonymized:
+            obj = json.loads(line)
+            obj["path"] = obj["path"].replace(
+                root_folder, os.path.join(anon_folder, "results", "eval")
+            )
+            line = json.dumps(obj)
+
+        writers[split].write(line)
+
+    # select a splitting strategy depending on whether lists are passed
+    if not both_passed and not one_passed:
+
         for line in open(datafile):
             obj = json.loads(line.strip())
             fname = os.path.splitext(os.path.basename(obj["path"]))[0]
-            if fname in enroll_fnames:
-                enroll_writer.write(
-                    anon_data[fname] if anon_datafile and anonymized_enrolls else line
-                )
-            else:
-                trial_writer.write(anon_data[fname] if anon_datafile else line)
 
-        trial_writer.close()
-        enroll_writer.close()
+            # check that the fname is only present in one of the lists, if any
+            if fname in fnames["trials"] and fname in fnames["enrolls"]:
+                error_msg = f"{fname} is part of both trials and enrolls"
+                LOGGER.error(error_msg)
+                raise RuntimeError(error_msg)
 
-    # if no enrolls, the trial is the first utt of each speaker
+            # try adding it to a list, and continue if it's added
+            if fname in fnames["trials"]:
+                write_line("trials", line)
+                continue
+            elif fname in fnames["enrolls"]:
+                write_line("enrolls", line)
+                continue
+
+            # if only one list was passed, add it to the other
+            if one_passed:
+                for split in splits:
+                    if len(fnames[split]) == 0:
+                        write_line(split, line)
+
+    # trials and enrolls are both null: split data of each speaker randomly 50/50
     else:
-        current_spk = None
-        objects = [json.loads(line) for line in open(datafile)]
-        objects = sorted(objects, key=lambda x: x["speaker_id"])
+        # group the objects according to the speaker ID
+        speaker_lines = dict()
+        for line in open(datafile):
+            spk_id = json.loads(line)["speaker_id"]
+            if spk_id not in speaker_lines:
+                speaker_lines[spk_id] = list()
 
-        spk_objs = list()
-        for obj in objects:
-            spk = obj["speaker_id"]
-            if current_spk is None:
-                current_spk = spk
-            elif spk != current_spk:
-                split_speaker(spk_objs, f_trials, f_enrolls, anon_folder, root_folder)
-                spk_objs = list()
-                current_spk = spk
-            spk_objs.append(obj)
+            speaker_lines[spk_id].append(line)
 
-        split_speaker(spk_objs, f_trials, f_enrolls, anon_folder, root_folder)
+        # split the objects of each speaker
+        for lines in speaker_lines.values():
+            random.shuffle(lines)
+            mid = len(lines) // 2
+            for line_idx, line in enumerate(lines):
+                split = "trials" if line_idx < mid else "enrolls"
+                write_line(split, line)
 
-    # sort the files according to their duration
-    sort_datafile(f_trials)
-    sort_datafile(f_enrolls)
+        # sort the files according to their duration
+        sort_datafile(f_trials)
+        sort_datafile(f_enrolls)
+
+    for writer in writers.values():
+        writer.close()
 
     return f_trials, f_enrolls
 
 
 def split_speaker(
     spk_data: list[dict],
-    trial_file: str,
-    enroll_file: str,
+    writers: dict[str, TextIO],
+    is_anonymized: dict[str, bool],
+    anon_data: list[str],
     exp_folder: str,
     root_folder: str = None,
 ) -> None:
     """
-    Split the speaker's data into trial and enrollment data. The first utt is the trial
-    utt, and the rest are enrollment utts. If the root folder is given, it is replaced
+    Split the speaker's data into trial and enrollment data.
+
+    If the root folder is given, it is replaced
     in the trial with the folder where the anonymized evaluation data is stored
     (`exp_folder/results/eval`).
 
@@ -159,8 +219,6 @@ def split_speaker(
             root_folder, os.path.join(exp_folder, "results", "eval")
         )
 
-    with open(trial_file, "a") as f:
-        f.write(json.dumps(trial_sample) + "\n")
-    with open(enroll_file, "a") as f:
-        for enroll_utt in enroll_data:
-            f.write(json.dumps(enroll_utt) + "\n")
+    writers["trials"].write(json.dumps(trial_sample) + "\n")
+    for enroll_utt in enroll_data:
+        writers["enrolls"].write(json.dumps(enroll_utt) + "\n")

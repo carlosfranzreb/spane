@@ -1,0 +1,3 @@
+spkid:
+  cls: spkanon_eval.featex.ProsodyEmbeddingOrange
+  train: false

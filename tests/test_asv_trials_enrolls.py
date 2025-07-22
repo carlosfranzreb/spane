@@ -28,6 +28,8 @@ class TestTrialsEnrolls(unittest.TestCase):
             obj["path"] = obj["path"].replace(self.root_folder, anon_folder)
             writer.write(json.dumps(obj) + "\n")
 
+        writer.close()
+
         # create trials and enrolls files
         self.expected_split = dict()
         self.expected_split["trials"] = [
@@ -55,39 +57,77 @@ class TestTrialsEnrolls(unittest.TestCase):
         """Remove the created directory"""
         shutil.rmtree(self.exp_folder)
 
-    def test_split_both_passed(self):
+    def test_when_passed(self):
         """
-        Test that it works when both splits are passed (trials and enrolls).
+        Test that it works when one or both splits are passed (trials, enrolls).
         """
 
         # anon folder is the same as root_folder and therefore not a kwarg
+        passed_splits_arr = [
+            {
+                "name": "both_passed",
+                "trials": self.split_files["trials"],
+                "enrolls": self.split_files["enrolls"],
+            },
+            {
+                "name": "trials_passed",
+                "trials": self.split_files["trials"],
+                "enrolls": None,
+            },
+            {
+                "name": "enrolls_passed",
+                "trials": None,
+                "enrolls": self.split_files["enrolls"],
+            },
+        ]
+        for passed_splits in passed_splits_arr:
+            self.split_with_args(passed_splits)
+
+            # delete created split files
+            for split in ["trials", "enrolls"]:
+                os.remove(os.path.join(self.exp_folder, "data", f"eval_{split}.txt"))
+
+    def split_with_args(self, passed_splits: dict[str, str]):
         out_files = dict()
         out_files["trials"], out_files["enrolls"] = split_trials_enrolls(
             self.exp_folder,
             True,
             root_folder=self.root_folder,
-            trials=self.split_files["trials"],
-            enrolls=self.split_files["enrolls"],
+            trials=passed_splits["trials"],
+            enrolls=passed_splits["enrolls"],
         )
 
         for split, out_file in out_files.items():
-            self.assertTrue(os.path.isfile(out_file), split)
+            error_msg = f"{passed_splits['name']}-{split}"
+            self.assertTrue(os.path.isfile(out_file), error_msg)
 
-            objects, fpaths = list(), list()
+            objects, fnames = list(), list()
             for line in open(out_file):
                 obj = json.loads(line)
                 objects.append(obj)
-                fpaths.append(os.path.splitext(os.path.basename(obj["path"]))[0])
+                fnames.append(os.path.splitext(os.path.basename(obj["path"]))[0])
 
             # Check the content of the files
-            self.assertCountEqual(fpaths, self.expected_split[split], split)
+            if passed_splits[split] is not None:
+                fnames_expected = self.expected_split[split]
+            else:
+                # get all samples except those in the other split
+                split_other = "trials" if split == "enrolls" else "enrolls"
+                fnames_other = self.expected_split[split_other]
+                fnames_expected = list()
+                for line in open(os.path.join(self.exp_folder, "data", "eval.txt")):
+                    obj = json.loads(line)
+                    fname = os.path.splitext(os.path.basename(obj["path"]))[0]
+                    if fname not in fnames_other:
+                        fnames_expected.append(fname)
+
+            # check the content of the files
+            self.assertCountEqual(fnames, fnames_expected, error_msg)
 
             # check that the utterances are ordered by duration
             last_dur = float("inf")
             for obj in objects:
-                self.assertTrue(obj["duration"] < last_dur, split)
+                self.assertTrue(obj["duration"] < last_dur, error_msg)
                 last_dur = obj["duration"]
 
-
-if __name__ == "__main__":
-    unittest.main()
+            # TODO: check that the paths are anonymized

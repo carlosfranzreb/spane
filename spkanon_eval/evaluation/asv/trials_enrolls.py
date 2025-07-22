@@ -13,14 +13,13 @@ from spkanon_eval.datamodules import sort_datafile
 LOGGER = logging.getLogger("progress")
 
 
-# TODO: this expects the data to be sorted by speaker_id, but we sort it now by duration
 def split_trials_enrolls(
     exp_folder: str,
     anonymized_enrolls: bool,
     root_folder: str = None,
     anon_folder: str = None,
-    trials: list = None,
-    enrolls: list = None,
+    trials: list[str] = None,
+    enrolls: list[str] = None,
 ) -> tuple[str, str]:
     """
     Split the evaluation data into trial and enrollment datafiles.
@@ -50,8 +49,8 @@ def split_trials_enrolls(
             If we are computing a baseline with original data, this is null.
         anon_folder (optional): folder where the anonymized evaluation data is stored.
             It it is not given, we assume that it is the same as the experiment folder.
-        enrolls: list of files defining the enrollment data. Each of these files
-            contains one filename per line.
+        trials, enrolls (optional): list of files defining the enrollment data. Each of
+            these files contains one filename per line.
 
     Returns:
         paths to the created trial and enrollment datafiles
@@ -86,15 +85,14 @@ def split_trials_enrolls(
 
     # gather the filenames of the trial and enrollment data, if any
     fnames = dict()
-    writers = dict()
     for split, split_files in zip(splits, [trials, enrolls]):
         fnames[split] = list()
         if split_files is not None:
             for f in split_files:
                 fnames[split].extend([line.strip() for line in open(f)])
 
-    both_passed = trials and enrolls
-    one_passed = trials or enrolls
+    both_passed = trials is not None and enrolls is not None
+    one_passed = trials is not None or enrolls is not None
 
     def write_line(split: str, line: str):
         """
@@ -123,10 +121,10 @@ def split_trials_enrolls(
             )
             line = json.dumps(obj)
 
-        writers[split].write(line)
+        writers[split].write(line + "\n")
 
     # select a splitting strategy depending on whether lists are passed
-    if not both_passed and not one_passed:
+    if both_passed or one_passed:
 
         for line in open(datafile):
             obj = json.loads(line.strip())
@@ -139,18 +137,19 @@ def split_trials_enrolls(
                 raise RuntimeError(error_msg)
 
             # try adding it to a list, and continue if it's added
-            if fname in fnames["trials"]:
-                write_line("trials", line)
-                continue
-            elif fname in fnames["enrolls"]:
-                write_line("enrolls", line)
+            is_written = False
+            for split in splits:
+                if fname in fnames[split]:
+                    write_line(split, line)
+                    is_written = True
+
+            if is_written or both_passed:
                 continue
 
-            # if only one list was passed, add it to the other
-            if one_passed:
-                for split in splits:
-                    if len(fnames[split]) == 0:
-                        write_line(split, line)
+            # if only one list was passed, add this line to the other
+            for split in splits:
+                if len(fnames[split]) == 0:
+                    write_line(split, line)
 
     # trials and enrolls are both null: split data of each speaker randomly 50/50
     else:
@@ -179,46 +178,3 @@ def split_trials_enrolls(
         writer.close()
 
     return f_trials, f_enrolls
-
-
-def split_speaker(
-    spk_data: list[dict],
-    writers: dict[str, TextIO],
-    is_anonymized: dict[str, bool],
-    anon_data: list[str],
-    exp_folder: str,
-    root_folder: str = None,
-) -> None:
-    """
-    Split the speaker's data into trial and enrollment data.
-
-    If the root folder is given, it is replaced
-    in the trial with the folder where the anonymized evaluation data is stored
-    (`exp_folder/results/eval`).
-
-    Args:
-        spk_data: list of datafile objects from one speaker.
-        trial_file: path to the trial datafile.
-        enroll_file: path to the enrollment datafile.
-        exp_folder: path to the experiment folder.
-        root_folder (optional): root folder of the data.
-
-    Raises:
-        ValueError: if one of the speakers only has one utterance. Each speaker should
-            have at least two utterances, one for trial and one for enrollment.
-    """
-
-    if len(spk_data) == 1:
-        error_msg = f"Speaker {spk_data[0]['speaker_id']} has only one utterance"
-        LOGGER.error(error_msg)
-        raise ValueError(error_msg)
-
-    trial_sample, enroll_data = spk_data[0], spk_data[1:]
-    if root_folder is not None:
-        trial_sample["path"] = trial_sample["path"].replace(
-            root_folder, os.path.join(exp_folder, "results", "eval")
-        )
-
-    writers["trials"].write(json.dumps(trial_sample) + "\n")
-    for enroll_utt in enroll_data:
-        writers["enrolls"].write(json.dumps(enroll_utt) + "\n")

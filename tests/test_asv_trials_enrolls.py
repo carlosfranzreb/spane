@@ -53,9 +53,9 @@ class TestTrialsEnrolls(unittest.TestCase):
                 for fname in self.expected_split[split]:
                     f.write(fname + "\n")
 
-    def tearDown(self):
-        """Remove the created directory"""
-        shutil.rmtree(self.exp_folder)
+    # def tearDown(self):
+    #     """Remove the created directory"""
+    #     shutil.rmtree(self.exp_folder)
 
     def test_when_passed(self):
         """
@@ -101,11 +101,13 @@ class TestTrialsEnrolls(unittest.TestCase):
             error_msg = f"{passed_splits['name']}-{split}"
             self.assertTrue(os.path.isfile(out_file), error_msg)
 
+            # gather output and check that the paths are anonymized
             objects, fnames = list(), list()
             for line in open(out_file):
                 obj = json.loads(line)
                 objects.append(obj)
                 fnames.append(os.path.splitext(os.path.basename(obj["path"]))[0])
+                self.assertTrue(self.exp_folder in obj["path"], error_msg)
 
             # Check the content of the files
             if passed_splits[split] is not None:
@@ -129,5 +131,3 @@ class TestTrialsEnrolls(unittest.TestCase):
             for obj in objects:
                 self.assertTrue(obj["duration"] < last_dur, error_msg)
                 last_dur = obj["duration"]
-
-            # TODO: check that the paths are anonymized

@@ -3,6 +3,8 @@ data:
   datasets:
     eval:
       - spkanon_eval/data/librispeech/ls-test-clean_max30s.txt
+      - spkanon_eval/data/edacc/edacc-test_max30s_min2s.txt
+      - spkanon_eval/data/common_voice/cv-test_3utts_max30s.txt
     train_eval:
       - spkanon_eval/data/librispeech/ls-train-clean-360.txt
     targets:

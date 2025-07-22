@@ -1,3 +1,4 @@
+# minimal datasets for debugging
 data:
   config_cfg: spkanon_eval/config/datasets/config.yaml
   datasets:
@@ -7,6 +8,9 @@ data:
       # - spkanon_eval/data/debug/cv-test.txt
       # - spkanon_eval/data/debug/ravdess.txt
     train_eval: # data to train the evaluation systems
-      - spkanon_eval/data/debug/ls-dev-clean-2.txt
+      - spkanon_eval/data/debug/ls-train-clean-5.txt
     targets:
       - spkanon_eval/data/debug/ls-dev-clean-2.txt
+    asv:
+      trials: spkanon_eval/data/debug/ls-dev-clean-2_trials.txt
+      enrolls: spkanon_eval/data/debug/ls-dev-clean-2_enrolls.txt

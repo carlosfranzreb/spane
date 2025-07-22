@@ -1,0 +1,5 @@
+{"path": "{root}/LibriSpeech/dev-clean-2/2412/153948/2412-153948-0001.flac", "text": "IT WILL BE SEEN THAT I DID NOT SUCCEED IN MY DESIGN AND THAT HOWEVER MUCH I MAY HAVE MET WITH THAT WAS NEW AND STRANGE I HAVE BEEN UNABLE TO REAP ANY PECUNIARY ADVANTAGE\n", "duration": 10.51, "label": "2412", "gender": "F"}
+{"path": "{root}/LibriSpeech/dev-clean-2/2412/153948/2412-153948-0002.flac", "text": "NO ONE WHO IS HIMSELF HONEST WILL DOUBT MY BEING SO\n", "duration": 3.72, "label": "2412", "gender": "F"}
+{"path": "{root}/LibriSpeech/dev-clean-2/3752/4944/3752-4944-0002.flac", "text": "IN THE VALLEY OF THE SHADOW OF DEATH HE IS WITH US\n", "duration": 3.225, "label": "3752", "gender": "F"}
+{"path": "{root}/LibriSpeech/dev-clean-2/1988/24833/1988-24833-0002.flac", "text": "SHE DOESN'T PICK THEM UP BUT JUST HAVING THEM IN THE ROOM SURE DOESN'T GIVE HER ASTHMA\n", "duration": 4.555, "label": "1988", "gender": "M"}
+{"path": "{root}/LibriSpeech/dev-clean-2/1988/24833/1988-24833-0003.flac", "text": "WHEN ARE YOU GETTING RID OF THESE CATS I'M NOT FIXING TO START AN ANNEX TO KATE'S CAT HOME\n", "duration": 5.16, "label": "1988", "gender": "M"}

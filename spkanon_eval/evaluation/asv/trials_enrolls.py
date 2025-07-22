@@ -5,7 +5,6 @@ Helper functions related to splitting the data into trial and enrollment utteran
 import os
 import json
 import logging
-from typing import TextIO
 import random
 
 from spkanon_eval.datamodules import sort_datafile
@@ -34,10 +33,9 @@ def split_trials_enrolls(
 
     ## Using anonymized data
 
-    If the root folder is passed, it is replaced in the trial with the folder where the
+    If `root_folder` is passed, it is replaced in the trial with the folder where the
     anonymized evaluation data is stored (`exp_folder/results/anon_eval`).
     If `anonymized_enrolls` is True, the same is done for enrolls as well.
-    The root folder is None if we are evaluating the baseline, where speech is not anonymized.
 
     Args:
         exp_folder: path to the experiment folder.
@@ -56,8 +54,10 @@ def split_trials_enrolls(
         paths to the created trial and enrollment datafiles
 
     Raises:
-        ValueError: if one of the speakers only has one utterance. Each speaker should
-            have at least two utterances, one for trial and one for enrollment.
+        ValueError: when a speaker only has one utterance for the random split.
+        ValueError: when an utterance is present both in trial and enrolls.
+        ValueError: when `root_folder` or `anon_folder` are missing and the enrollment
+            data should be anonymized.
     """
 
     LOGGER.info("Splitting evaluation data into trial and enrollment data")
@@ -75,6 +75,14 @@ def split_trials_enrolls(
         LOGGER.info("No root folder given: original trial data will be used.")
     elif anon_folder is None:
         anon_folder = exp_folder
+
+    # check that all the necessary arguments are present
+    if (anonymized_trials or anonymized_enrolls) and (
+        not anon_folder or not root_folder
+    ):
+        raise ValueError(
+            "`anon_folder` and `anon_folder` are needed to find the anonymized path"
+        )
 
     # create the file writers and define which data is anonymized
     is_anonymized = {"trials": anonymized_trials, "enrolls": anonymized_enrolls}
@@ -96,32 +104,23 @@ def split_trials_enrolls(
 
     def write_line(split: str, line: str):
         """
-        Write the line to the given split. If the split should be anonymized, replace the
-        original path with the anonymized one. For this we need `root_folder` and
-        `anon_folder`.
+        Write the line to the given split. If the split should be anonymized, the
+        original path is replaced with the anonymized one.
 
         Args:
             split: the split to which the line should be written (trials or enrolls).
             line: the original line from the datafile that should be dumped.
         """
 
-        # check that all the necessary arguments are present
-        if is_anonymized[split] and (not root_folder or not anon_folder):
-            error_msg = (
-                "`root_folder` and `anon_folder` are needed to find the anonymized path"
-            )
-            LOGGER.error(error_msg)
-            raise ValueError(error_msg)
-
         # replace the original path with the anonymized ones if needed
-        if is_anonymized:
+        if is_anonymized[split]:
             obj = json.loads(line)
             obj["path"] = obj["path"].replace(
                 root_folder, os.path.join(anon_folder, "results", "eval")
             )
-            line = json.dumps(obj)
+            line = json.dumps(obj) + "\n"
 
-        writers[split].write(line + "\n")
+        writers[split].write(line)
 
     # select a splitting strategy depending on whether lists are passed
     if both_passed or one_passed:
@@ -132,9 +131,7 @@ def split_trials_enrolls(
 
             # check that the fname is only present in one of the lists, if any
             if fname in fnames["trials"] and fname in fnames["enrolls"]:
-                error_msg = f"{fname} is part of both trials and enrolls"
-                LOGGER.error(error_msg)
-                raise RuntimeError(error_msg)
+                raise ValueError(f"{fname} is part of both trials and enrolls")
 
             # try adding it to a list, and continue if it's added
             is_written = False
@@ -163,18 +160,24 @@ def split_trials_enrolls(
             speaker_lines[spk_id].append(line)
 
         # split the objects of each speaker
-        for lines in speaker_lines.values():
+        for spk, lines in speaker_lines.items():
+
+            # check that the speaker has at least two utterances
+            if len(lines) < 2:
+                raise ValueError(f"Speaker with ID {spk} has less than 2 utterances")
+
             random.shuffle(lines)
             mid = len(lines) // 2
             for line_idx, line in enumerate(lines):
                 split = "trials" if line_idx < mid else "enrolls"
                 write_line(split, line)
 
-        # sort the files according to their duration
-        sort_datafile(f_trials)
-        sort_datafile(f_enrolls)
-
     for writer in writers.values():
         writer.close()
+
+    # sort the files according to their duration
+    if not both_passed and not one_passed:
+        sort_datafile(f_trials)
+        sort_datafile(f_enrolls)
 
     return f_trials, f_enrolls

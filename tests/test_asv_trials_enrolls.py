@@ -16,7 +16,7 @@ class TestTrialsEnrolls(unittest.TestCase):
         os.makedirs(os.path.join(self.exp_folder, "data"))
 
         # add the original datafile to the experiment folder
-        self.root_folder = "tests/data"
+        self.root_folder = "spkanon_eval/tests/data"
         datafile = "spkanon_eval/tests/datafiles/ls-dev-clean-2.txt"
         shutil.copy(datafile, os.path.join(self.exp_folder, "data", "eval.txt"))
 
@@ -53,9 +53,9 @@ class TestTrialsEnrolls(unittest.TestCase):
                 for fname in self.expected_split[split]:
                     f.write(fname + "\n")
 
-    # def tearDown(self):
-    #     """Remove the created directory"""
-    #     shutil.rmtree(self.exp_folder)
+    def tearDown(self):
+        """Remove the created directory"""
+        shutil.rmtree(self.exp_folder)
 
     def test_when_passed(self):
         """
@@ -82,10 +82,7 @@ class TestTrialsEnrolls(unittest.TestCase):
         ]
         for passed_splits in passed_splits_arr:
             self.split_with_args(passed_splits)
-
-            # delete created split files
-            for split in ["trials", "enrolls"]:
-                os.remove(os.path.join(self.exp_folder, "data", f"eval_{split}.txt"))
+            self.delete_split_files()
 
     def split_with_args(self, passed_splits: dict[str, str]):
         out_files = dict()
@@ -127,7 +124,128 @@ class TestTrialsEnrolls(unittest.TestCase):
             self.assertCountEqual(fnames, fnames_expected, error_msg)
 
             # check that the utterances are ordered by duration
-            last_dur = float("inf")
-            for obj in objects:
-                self.assertTrue(obj["duration"] < last_dur, error_msg)
-                last_dur = obj["duration"]
+            self.check_durations_order(objects, error_msg)
+
+    def test_when_none_passed(self):
+        """
+        Test that the split works as expected when neither trials nor enrolls are
+        passed.
+        Check that not anonymizing the enrolls works as well.
+        """
+        out_files = dict()
+        out_files["trials"], out_files["enrolls"] = split_trials_enrolls(
+            self.exp_folder,
+            False,
+            root_folder=self.root_folder,
+        )
+
+        # get all samples
+        fnames_all = list()
+        for line in open(os.path.join(self.exp_folder, "data", "eval.txt")):
+            obj = json.loads(line)
+            fname = os.path.splitext(os.path.basename(obj["path"]))[0]
+            fnames_all.append(fname)
+
+        fnames = {split: list() for split in self.expected_split}
+        for split, out_file in out_files.items():
+            self.assertTrue(os.path.isfile(out_file), split)
+
+            # gather output and check that the paths are anonymized
+            objects = list()
+            for line in open(out_file):
+                obj = json.loads(line)
+                objects.append(obj)
+                fnames[split].append(os.path.splitext(os.path.basename(obj["path"]))[0])
+                if split == "trials":
+                    self.assertTrue(self.exp_folder in obj["path"], split)
+                else:
+                    self.assertFalse(self.exp_folder in obj["path"], split)
+
+            # check that the utterances are ordered by duration
+            self.check_durations_order(objects, split)
+
+        # check that all utterances are either trials or enrolls
+        fnames = {split: set(fnames[split]) for split in fnames}
+        self.assertTrue(
+            len(fnames_all) == sum([len(fnames[split]) for split in fnames])
+        )
+
+        # check that there are no duplicates between trials and enrolls
+        self.assertTrue(fnames["trials"].isdisjoint(fnames["enrolls"]))
+
+    def check_durations_order(self, objects: list[dict], error_msg: str = None):
+        """Check that the objects are sorted by duration in reverse order."""
+        last_dur = float("inf")
+        for obj in objects:
+            self.assertTrue(obj["duration"] < last_dur, error_msg)
+            last_dur = obj["duration"]
+
+    def test_errors(self):
+        """Test that the function correctly raises errors when input is invalid."""
+        # an error should be raised when root_folder is missing for anonymization.
+        with self.assertRaises(ValueError):
+            split_trials_enrolls(self.exp_folder, True)
+
+        # an error should be raised when an utterance is in both trials and enrolls.
+        duplicate_enroll_file = os.path.join(
+            self.exp_folder, "data", "duplicate_enrolls.txt"
+        )
+        with open(duplicate_enroll_file, "w") as f:
+            for fname in self.expected_split["enrolls"]:
+                f.write(fname + "\n")
+            f.write(self.expected_split["trials"][0] + "\n")
+
+        with self.assertRaises(ValueError):
+            split_trials_enrolls(
+                self.exp_folder,
+                anonymized_enrolls=True,
+                root_folder=self.root_folder,
+                trials=self.split_files["trials"],
+                enrolls=[duplicate_enroll_file],
+            )
+        os.remove(duplicate_enroll_file)
+        self.delete_split_files()
+
+        # an error should be raised when a speaker has only one utterance
+        # and neither trials nor enrolls are passed
+        datafile = os.path.join(self.exp_folder, "data", "eval.txt")
+        datafile_faulty = os.path.join(self.exp_folder, "data", "faulty_eval.txt")
+
+        spk0_has_one_utt = False
+        with open(datafile) as f_in, open(datafile_faulty, "w") as f_out:
+            for line in f_in:
+                obj = json.loads(line)
+                if obj["speaker_id"] == 0:
+                    if spk0_has_one_utt:
+                        continue
+                    else:
+                        spk0_has_one_utt = True
+                f_out.write(line)
+
+        backup_path = datafile + ".bak"
+        os.rename(datafile, backup_path)
+        os.rename(datafile_faulty, datafile)
+
+        with self.assertRaises(ValueError):
+            split_trials_enrolls(
+                self.exp_folder, anonymized_enrolls=False, root_folder=self.root_folder
+            )
+
+        os.rename(datafile, datafile_faulty)
+        os.rename(backup_path, datafile)
+        os.remove(datafile_faulty)
+        self.delete_split_files()
+
+    def delete_split_files(self):
+        """Delete the split files that were created, to prepare for the next test."""
+        for split in ["trials", "enrolls"]:
+            f = os.path.join(self.exp_folder, "data", f"eval_{split}.txt")
+            if os.path.exists(f):
+                os.remove(f)
+
+    def check_durations_order(self, objects: list[dict], error_msg: str = None):
+        """Check that the objects are sorted by duration in reverse order."""
+        last_dur = float("inf")
+        for obj in objects:
+            self.assertTrue(obj["duration"] < last_dur, error_msg)
+            last_dur = obj["duration"]

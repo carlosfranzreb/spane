@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: "3.11"
           auto-update-conda: true
-          activate-environment: "" 
+          activate-environment: true 
 
       - name: Build and Test Project
         run: |

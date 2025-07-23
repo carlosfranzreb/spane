@@ -16,3 +16,4 @@ spkanon_models
 StarGANv2VC
 softvc_acoustic
 softvc_hifigan
+tests/logs/

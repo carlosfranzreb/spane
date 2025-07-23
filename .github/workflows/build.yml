@@ -24,4 +24,5 @@ jobs:
           echo $CONDA/bin >> $GITHUB_PATH
       - name: Build & test project
         run: |
-          bash ./build/framework.sh
+          cd ..
+          bash spkanon_eval/build/framework.sh

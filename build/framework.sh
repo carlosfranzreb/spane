@@ -10,7 +10,7 @@ conda install -y 'ffmpeg<5'
 
 # install pip dependencies
 pip install --no-input --upgrade pip
-pip install --no-input spkanon_eval
+pip install --no-input ./spkanon_eval
 
 # clone NISQA
 cd spkanon_eval

@@ -85,6 +85,10 @@ class BaseSelector:
         """
         raise NotImplementedError
 
+    def get_consistent_targets(self) -> bool:
+        """Return whether targets are consistent across speakers."""
+        return self.targets is not None
+
     def set_consistent_targets(self, consistent_targets: bool) -> None:
         """
         Update the target selection algorithm with the new value of

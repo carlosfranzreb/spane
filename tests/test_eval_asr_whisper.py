@@ -35,8 +35,7 @@ class TestEvalWhisper(unittest.TestCase):
                 "batch_size": 4,
                 "data": {
                     "config": {
-                        "sample_rate": 16000,
-                        "batch_size": 4,
+                        "sample_rate_in": 16000,
                         "num_workers": 0,
                         "chunk_sizes": {"ls-dev-clean-2": {100: 1}},
                     },

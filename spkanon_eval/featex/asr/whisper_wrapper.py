@@ -84,7 +84,7 @@ class Whisper(InferComponent, EvalComponent):
         with open(dump_file, "w", encoding="utf-8") as f:
             f.write("path n_edits n_words_ref wer text\n")
 
-        for _, batch, sample_data in tqdm(
+        for batch, sample_data in tqdm(
             eval_dataloader(self.config.data.config, datafile, self)
         ):
             texts_pred = self.run(batch)  # compute the transcriptions for the batch

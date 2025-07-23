@@ -102,7 +102,7 @@ def infer(exp_folder: str, df_name: str, model: Anonymizer, config: DictConfig) 
 
     dl_config = deepcopy(data_cfg)
     dl_config.sample_rate = data_cfg.sample_rate_in
-    for _, batch, data in tqdm(eval_dataloader(dl_config, datafile, model)):
+    for batch, data in tqdm(eval_dataloader(dl_config, datafile, model)):
         oom_handler(batch, data)
 
     writer.close()

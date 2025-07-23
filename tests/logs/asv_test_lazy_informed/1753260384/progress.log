@@ -1,0 +1,74 @@
+2025-07-23 10:46:24,039 - progress - INFO - Initialized mel-spectrogram extractor with config:
+2025-07-23 10:46:24,040 - progress - INFO - 	n_mels: 80
+2025-07-23 10:46:24,040 - progress - INFO - 	n_fft: 2048
+2025-07-23 10:46:24,040 - progress - INFO - 	win_length: 1200
+2025-07-23 10:46:24,040 - progress - INFO - 	hop_length: 300
+2025-07-23 10:46:24,041 - progress - INFO - Passing target selection algorithm to dummy
+2025-07-23 10:46:24,041 - progress - INFO - ### Start of inference with experiment folder `spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384`
+2025-07-23 10:46:24,041 - progress - INFO - Preparing datafile for stage eval
+2025-07-23 10:46:24,041 - progress - INFO - 10 samples included (0.016 h)
+2025-07-23 10:46:24,041 - progress - INFO - 0 samples too short (0.0 h)
+2025-07-23 10:46:24,041 - progress - INFO - 0 samples too long (0.0 h)
+2025-07-23 10:46:24,041 - progress - INFO - Done with datafile prep for stage eval
+2025-07-23 10:46:24,056 - progress - INFO - Creating eval. DL for `spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/eval.txt`
+2025-07-23 10:46:24,056 - progress - INFO - Creating dataloader for spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/eval.txt
+2025-07-23 10:46:24,056 - progress - INFO - 	Model: Anonymizer
+2025-07-23 10:46:24,057 - progress - INFO - 	Sample rate: 16000
+2025-07-23 10:46:24,057 - progress - INFO - 	Num. workers: 0
+2025-07-23 10:46:24,058 - progress - INFO - Computing chunk sizes for spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/eval.txt and Anonymizer
+2025-07-23 10:46:24,059 - progress - WARNING - 	Model is on CPU. Skipping chunk size computation.
+2025-07-23 10:46:24,174 - progress - INFO - End of inference
+2025-07-23 10:46:24,175 - progress - INFO - ### Start of evaluation
+2025-07-23 10:46:24,175 - progress - INFO - Preparing datafile for stage train_eval
+2025-07-23 10:46:24,175 - progress - INFO - 10 samples included (0.016 h)
+2025-07-23 10:46:24,175 - progress - INFO - 0 samples too short (0.0 h)
+2025-07-23 10:46:24,175 - progress - INFO - 0 samples too long (0.0 h)
+2025-07-23 10:46:24,175 - progress - INFO - Done with datafile prep for stage train_eval
+2025-07-23 10:46:24,487 - progress - INFO - Training component `asv_informed`
+2025-07-23 10:46:24,487 - progress - INFO - Anonymizing training data: spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/train_eval.txt
+2025-07-23 10:46:24,487 - progress - INFO - Set consistent targets of dummy to False
+2025-07-23 10:46:24,488 - progress - INFO - Disabling consistent targets
+2025-07-23 10:46:24,488 - progress - INFO - Creating eval. DL for `spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/train_eval.txt`
+2025-07-23 10:46:24,488 - progress - INFO - Creating dataloader for spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/train_eval.txt
+2025-07-23 10:46:24,488 - progress - INFO - 	Model: Anonymizer
+2025-07-23 10:46:24,488 - progress - INFO - 	Sample rate: 16000
+2025-07-23 10:46:24,489 - progress - INFO - 	Num. workers: 0
+2025-07-23 10:46:24,489 - progress - INFO - Computing chunk sizes for spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/train_eval.txt and Anonymizer
+2025-07-23 10:46:24,489 - progress - WARNING - 	Model is on CPU. Skipping chunk size computation.
+2025-07-23 10:46:24,657 - progress - INFO - Set consistent targets of dummy to True
+2025-07-23 10:46:24,657 - progress - INFO - Enabling consistent targets and removing previous targets
+2025-07-23 10:46:24,657 - progress - INFO - Computing SpkId vectors of spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/anon_train_eval.txt
+2025-07-23 10:46:24,658 - progress - INFO - Creating dataloader for spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/anon_train_eval.txt
+2025-07-23 10:46:24,658 - progress - INFO - 	Model: SpkId
+2025-07-23 10:46:24,658 - progress - INFO - 	Sample rate: 16000
+2025-07-23 10:46:24,658 - progress - INFO - 	Num. workers: 0
+2025-07-23 10:46:24,658 - progress - INFO - Computing chunk sizes for spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/anon_train_eval.txt and SpkId
+2025-07-23 10:46:24,658 - progress - WARNING - 	Model is on CPU. Skipping chunk size computation.
+2025-07-23 10:46:25,446 - progress - INFO - Training PLDA model
+2025-07-23 10:46:25,462 - progress - WARNING - PCA is used within PLDA with 7 components
+2025-07-23 10:46:25,462 - progress - INFO - Running evaluation with component `asv_informed`
+2025-07-23 10:46:25,462 - progress - INFO - Splitting evaluation data into trial and enrollment data
+2025-07-23 10:46:25,463 - progress - INFO - Computing SpkId vectors of spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/eval_trials.txt
+2025-07-23 10:46:25,463 - progress - INFO - Creating dataloader for spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/eval_trials.txt
+2025-07-23 10:46:25,463 - progress - INFO - 	Model: SpkId
+2025-07-23 10:46:25,463 - progress - INFO - 	Sample rate: 16000
+2025-07-23 10:46:25,463 - progress - INFO - 	Num. workers: 0
+2025-07-23 10:46:25,463 - progress - INFO - Computing chunk sizes for spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/eval_trials.txt and SpkId
+2025-07-23 10:46:25,463 - progress - WARNING - 	Model is on CPU. Skipping chunk size computation.
+2025-07-23 10:46:26,020 - progress - INFO - Computing SpkId vectors of spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/eval_enrolls.txt
+2025-07-23 10:46:26,020 - progress - INFO - Creating dataloader for spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/eval_enrolls.txt
+2025-07-23 10:46:26,020 - progress - INFO - 	Model: SpkId
+2025-07-23 10:46:26,020 - progress - INFO - 	Sample rate: 16000
+2025-07-23 10:46:26,020 - progress - INFO - 	Num. workers: 0
+2025-07-23 10:46:26,021 - progress - INFO - Computing chunk sizes for spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/eval_enrolls.txt and SpkId
+2025-07-23 10:46:26,021 - progress - WARNING - 	Model is on CPU. Skipping chunk size computation.
+2025-07-23 10:46:26,445 - progress - INFO - Computing LLRs for all pairs of trial and enrollment utterances
+2025-07-23 10:46:26,445 - progress - INFO - Analysing ASV results for spkanon_eval/tests/logs/asv_test_lazy_informed/1753260384/data/anon_eval.txt
+2025-07-23 10:46:26,446 - progress - INFO - Computing EER of the whole dataset and dumping ROC curve
+2025-07-23 10:46:26,607 - progress - INFO - Computing EER for all values of gender
+2025-07-23 10:46:26,608 - progress - WARNING - There are no different-speaker pairs; cannot compute EER
+2025-07-23 10:46:26,608 - progress - INFO - Computing EER for all values of target
+2025-07-23 10:46:26,609 - progress - WARNING - There are no different-speaker pairs; cannot compute EER
+2025-07-23 10:46:26,609 - progress - WARNING - There are no different-speaker pairs; cannot compute EER
+2025-07-23 10:46:26,609 - progress - WARNING - There are no different-speaker pairs; cannot compute EER
+2025-07-23 10:46:26,611 - progress - INFO - End of evaluation

@@ -68,7 +68,7 @@ def eval_dataloader(
         while len(data) < batch[0].shape[0]:
             data.append(next(data_iter))
         # yield the batch, the datafile and the additional data
-        yield datafile, batch, data
+        yield batch, data
 
 
 def data_iterator(datafile: str) -> Iterable[dict]:

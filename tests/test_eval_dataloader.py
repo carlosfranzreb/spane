@@ -18,45 +18,43 @@ class TestEvalDataloader(unittest.TestCase):
         """
         self.datafile = "spkanon_eval/tests/datafiles/ls-dev-clean-2.txt"
         self.sample_rate = 16000
-        self.batch_size = 2
         self.config = OmegaConf.create(
             {
-                "batch_size": self.batch_size,
                 "num_workers": 0,
                 "sample_rate": self.sample_rate,
-                "chunk_sizes": {"ls-dev-clean-2": {100: 1}},
+                "sample_rate_in": self.sample_rate + 8000,
+                "sample_rate_out": self.sample_rate,
             }
         )
         self.device = "cpu"
 
-        config = OmegaConf.create(
+        whisper_config = OmegaConf.create(
             {
                 "train": False,
                 "size": "tiny",
                 "output": "text",
-                "batch_size": 4,
                 "data": {
                     "config": {
-                        "sample_rate": 16000,
-                        "batch_size": 4,
+                        "sample_rate": self.sample_rate,
                         "num_workers": 0,
-                        "chunk_sizes": {"ls-dev-clean-2": {100: 1}},
                     },
                 },
             }
         )
-        self.model = Whisper(config, self.device)
+        self.model = Whisper(whisper_config, self.device)
 
     def test_eval_dataloader(self):
         """
         Test that the eval dataloader returns the correct number of batches and that
-        the content of the batches matches that of the test datafiles. We asume that
-        the dataset's spk2id mapping is correct.
+        the content of the batches matches that of the test datafiles. This test
+        also checks that the resampling works.
+
+        We asume that the dataset's spk2id mapping is correct.
         """
         dl = eval_dataloader(self.config, self.datafile, self.model)
         samples = open(self.datafile).readlines()
 
-        for datafile, batch, data in dl:
+        for batch, data in dl:
             batch_size = batch[0].shape[0]
             self.assertLessEqual(batch_size, self.batch_size)
             objs = list()
@@ -68,9 +66,9 @@ class TestEvalDataloader(unittest.TestCase):
                 obj = objs[i]
                 audio_true, sr = torchaudio.load(obj["path"])
                 sample_data = data[i]
-                if sr != self.sample_rate:
+                if sr != self.config.sample_rate_in:
                     resampler = torchaudio.transforms.Resample(
-                        orig_freq=sr, new_freq=self.sample_rate
+                        orig_freq=sr, new_freq=self.config.sample_rate_in
                     )
                     audio_true = resampler(audio_true)
                 self.assertTrue(audio_true.shape[1] <= batch[0][i].shape[0])

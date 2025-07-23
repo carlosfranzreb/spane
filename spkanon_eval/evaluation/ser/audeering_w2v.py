@@ -81,9 +81,9 @@ class EmotionEvaluator(InferComponent, EvalComponent):
 
         dl_config = deepcopy(self.config.data.config)
         dl_config.max_ratio = 0.05
-        for _, batch, sample_data in tqdm(
+        for batch, sample_data in tqdm(
             eval_dataloader(dl_config, datafile, self),
-            desc="Evaluating emotional samples"
+            desc="Evaluating emotional samples",
         ):
             # compute the emotion dimensions for the batch
             embs_y, dims_y = self.run(batch)

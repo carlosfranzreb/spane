@@ -1,5 +1,5 @@
 """
-Slightly simplified version of the ASV system from the VPC 2022.
+Speaker verifier from the VoicePrivacy Challenge 2024.
 
 ### Training phase
 
@@ -81,7 +81,10 @@ class ASV(EvalComponent):
         # if training is skipped, load the mean emb. of the training data
         self.train_mean_spkemb = None
         if config.train is False:
-            self.train_mean_spkemb = np.load(config.train_mean_spkemb)
+            if config.train_mean_spkemb is not None:
+                self.train_mean_spkemb = np.load(config.train_mean_spkemb)
+            else:
+                LOGGER.warning("`train_mean_spkemb` is null in the config.")
 
     def train(self, exp_folder: str) -> None:
         """
@@ -138,7 +141,8 @@ class ASV(EvalComponent):
         dumped, and the EER is computed in `analyse_results`.
         """
         for name in ["trials", "enrolls"]:
-            vecs[name] -= self.train_mean_spkemb
+            if self.train_mean_spkemb is not None:
+                vecs[name] -= self.train_mean_spkemb
             if self.config.backend == "plda":
                 vecs[name] = self.plda_model.model.transform(
                     vecs[name], from_space="D", to_space="U_model"
@@ -155,7 +159,7 @@ class ASV(EvalComponent):
         vecs["enrolls"] = avg_vecs
         labels["enrolls"] = unique_speakers
 
-        # compute scores of all pairs of trial and enrollment utterances
+        # compute scores of all pairs of trial and enrollment embeddings
         if self.config.backend == "plda":
             scores, pairs = compute_llrs(self.plda_model, vecs, CHUNK_SIZE)
         else:
@@ -224,6 +228,10 @@ class ASV(EvalComponent):
     ) -> str:
         """
         Anonymize the given datafile and return the path to the anonymized datafile.
+        `consistent_targets` is set to the given value and back to the original one
+        after the anonymization is complete. If the old and the pass values are both
+        true, the existing targets are removed every time the setter function is
+        called.
 
         Args:
             exp_folder: path to the experiment folder
@@ -233,8 +241,10 @@ class ASV(EvalComponent):
             consistent_targets: whether each speaker should always be anonymized with
             the same target.
         """
+        old_value = self.model.get_consistent_targets()
         self.model.set_consistent_targets(consistent_targets)
         anon_datafile = infer(exp_folder, df_name, self.model, self.config)
+        self.model.set_consistent_targets(old_value)
         return anon_datafile
 
     def compute_spkid_vecs(self, datafile: str) -> tuple[np.ndarray, np.ndarray]:

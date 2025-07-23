@@ -111,6 +111,19 @@ class Anonymizer:
                 out[name] = component_out
         return out
 
+    def get_consistent_targets(self) -> bool:
+        """
+        Get whether the selected targets should be consistent. We assume that targets
+        are selected in the `featproc` module, and iterate over its components looking
+        for the equivalent method.
+        """
+        if self.featproc is None:
+            LOGGER.warning("No featproc module found, so no targets to be consistent")
+            return
+        for name, component in self.featproc.items():
+            if hasattr(component, "target_selection"):
+                return component.target_selection.get_consistent_targets()
+
     def set_consistent_targets(self, consistent_targets: bool) -> None:
         """
         Set whether the selected targets should be consistent. We assume that targets

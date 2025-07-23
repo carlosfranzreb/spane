@@ -19,6 +19,7 @@ class DummyModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.fc = torch.nn.Linear(1, 1)
+        self.device = "cpu"
 
     def forward(self, *args):
         input = torch.tensor([1.0])
@@ -32,6 +33,7 @@ class TestEvalPerformance(unittest.TestCase):
         the CPU results, not the GPU results.
         """
 
+        # create/empty experiment folde
         exp_folder = "spkanon_eval/tests/logs/performance"
         if os.path.isdir(exp_folder):
             shutil.rmtree(exp_folder)
@@ -43,6 +45,11 @@ class TestEvalPerformance(unittest.TestCase):
                 "repetitions": 2,
                 "sample_rate": 16000,
                 "durations": [2, 3],
+                "data": {
+                    "config": {
+                        "sample_rate_in": 16000,
+                    }
+                },
             },
         )
         evaluator = PerformanceEvaluator(self.config, "cpu", DummyModel())

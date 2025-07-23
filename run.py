@@ -17,7 +17,10 @@ def setup(args) -> DictConfig:
     config.device = args.device
     config.data.config.num_workers = args.num_workers
     config.commit_hash = (
-        subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
+        subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=os.path.join(os.path.dirname(__file__), "spkanon_eval"),
+        )
         .decode("ascii")
         .strip()
     )

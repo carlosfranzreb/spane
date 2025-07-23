@@ -1,3 +1,5 @@
+# ! This script should be called from the parent folder of the repository
+
 # create and activate conda environment
 conda update -n base -c defaults conda
 conda create -p ./venv python=3.11 -y
@@ -8,11 +10,12 @@ conda install -y 'ffmpeg<5'
 
 # install pip dependencies
 pip install --no-input --upgrade pip
-pip install --no-input .
+pip install --no-input spkanon_eval
 
 # clone NISQA
+cd spkanon_eval
 git clone https://github.com/gabrielmittag/NISQA.git
+cd ..
 
 # run tests
-cd ..
 python -m unittest discover -s spkanon_eval/tests -p "test_*.py"

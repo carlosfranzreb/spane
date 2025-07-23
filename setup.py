@@ -6,7 +6,7 @@ DESCRIPTION = "Speaker anonymization Evaluation (SpAnE)"
 URL = "https://github.com/carlosfranzreb/spkanon_eval"
 EMAIL = "carlos.franzreb@dfki.de"
 AUTHOR = "Carlos Franzreb"
-REQUIRES_PYTHON = ">=3.11.0"
+REQUIRES_PYTHON = ">=3.9.0"
 VERSION = "0.3.0"
 
 

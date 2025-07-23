@@ -5,7 +5,7 @@ omegaconf>=2.1.0
 transformers>=4.30.0
 editdistance>=0.6.2
 pandas>=2.0.3
-praat-parselmouth==0.4.5
+praat-parselmouth==0.4.6
 
 # NISQA dependencies
 librosa>=0.8.1

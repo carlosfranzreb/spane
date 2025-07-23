@@ -20,4 +20,4 @@ jobs:
       - name: Build and Test Project
         run: |
           cd ..
-          bash ./spkanon-eval/build/framework.sh
+          bash ./spkanon_eval/build/framework.sh

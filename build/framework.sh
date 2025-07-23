@@ -1,6 +1,6 @@
 # create and activate conda environment
 conda update -n base -c defaults conda
-conda create -p ./venv python=3.9 -y
+conda create -p ./venv python=3.11 -y
 eval "$(conda shell.bash hook)" && conda activate ./venv
 
 # ffmpeg is required to load MP3 files

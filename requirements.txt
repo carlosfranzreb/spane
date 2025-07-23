@@ -1,4 +1,4 @@
-speechbrain>=1.0.0
+speechbrain==1.0.3
 openai-whisper>=20230314
 plda @ https://github.com/RaviSoji/plda/tarball/master
 omegaconf>=2.1.0
@@ -12,5 +12,5 @@ librosa>=0.8.1
 matplotlib>=3.5.1
 
 # dev dependencies
-flake8>=6.0.0
+ruff==0.12.4
 black>=19.10b0

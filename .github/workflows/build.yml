@@ -4,22 +4,20 @@ on:
   push:
     branches:
       - master
+      - better_batches
   pull_request:
     branches:
       - master
 
 jobs:
-  build-macos:
-    runs-on: macos-latest
-    strategy:
-      max-parallel: 5
-
+  build:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python 3.9
+      - name: Set up Python 3.11
         uses: actions/setup-python@v3
         with:
-          python-version: "3.9"
+          python-version: "3.11"
       - name: Add conda to system path
         run: |
           # $CONDA is an environment variable pointing to the root of the miniconda directory

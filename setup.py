@@ -2,12 +2,12 @@ from setuptools import find_packages, setup
 
 
 NAME = "spkanon_eval"
-DESCRIPTION = "Evaluation framework for speaker anonymization pipelines."
+DESCRIPTION = "Speaker anonymization Evaluation (SpAnE)"
 URL = "https://github.com/carlosfranzreb/spkanon_eval"
 EMAIL = "carlos.franzreb@dfki.de"
 AUTHOR = "Carlos Franzreb"
-REQUIRES_PYTHON = ">=3.9.0"
-VERSION = "0.2.0"
+REQUIRES_PYTHON = ">=3.11.0"
+VERSION = "0.3.0"
 
 
 def req_file(filename: str) -> list[str]:

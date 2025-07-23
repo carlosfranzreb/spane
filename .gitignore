@@ -4,7 +4,7 @@
 .code-server
 __pycache__
 venv
-build
+build/lib
 pretrained_models
 checkpoints
 models

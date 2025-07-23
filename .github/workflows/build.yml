@@ -12,29 +12,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
-    defaults:
-      run:
-        shell: bash -l {0}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Conda Environment
-        uses: conda-incubator/setup-miniconda@v3
-        with:
-          python-version: "3.11"
-          auto-update-conda: true
-          activate-environment: true 
 
       - name: Build and Test Project
         run: |
-          conda install -y 'ffmpeg<5'
-          pip install --no-input --upgrade pip
-          pip install --no-input .
-          git clone https://github.com/gabrielmittag/NISQA.git
           cd ..
-          python -m unittest discover -s ./spkanon_eval/tests -p "test_*.py"
+          bash ./spkanon-eval/build/framework.sh

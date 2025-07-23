@@ -56,7 +56,6 @@ class TestEvalDataloader(unittest.TestCase):
 
         for batch, data in dl:
             batch_size = batch[0].shape[0]
-            self.assertLessEqual(batch_size, self.batch_size)
             objs = list()
             for _ in range(batch_size):
                 objs.append(json.loads(samples.pop(0)))

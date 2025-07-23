@@ -35,5 +35,6 @@ jobs:
           conda install -y 'ffmpeg<5'
           pip install --no-input --upgrade pip
           pip install --no-input .
-          git clone https://github.com/gabrielmittag/NISQA.git ./spkanon_eval/NISQA
+          git clone https://github.com/gabrielmittag/NISQA.git
+          cd ..
           python -m unittest discover -s ./spkanon_eval/tests -p "test_*.py"

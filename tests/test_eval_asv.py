@@ -24,63 +24,23 @@ from spkanon_eval.utils import seed_everything
 from base import BaseTestClass, run_pipeline
 
 
-SPKEMB_SIZE = 192
-SPKID_CONFIG = {
-    "cls": "spkanon_eval.featex.spkid.spkid.SpkId",
-    "path": "speechbrain/spkrec-ecapa-voxceleb",
-    "train": False,
-    "batch_size": 2,
-    "num_workers": 0,
-    "emb_model_ckpt": None,
-}
-ASV_IGNORANT_CONFIG = OmegaConf.create(
-    {
-        "asv_ignorant": {
-            "cls": "spkanon_eval.evaluation.ASV",
-            "scenario": "ignorant",
-            "spkid": SPKID_CONFIG,
-            "train": True,
-            "backend": "plda",
-            "train_mean_spkemb": None,
-            "plda_ckpt": None,
-            "save_spkembs": False,
-            "consistent_targets": False,
-            "sample_rate_out": 16000,
-        }
-    }
-)
-ASV_INFORMED_CONFIG = OmegaConf.create(
-    {
-        "asv_informed": {
-            "cls": "spkanon_eval.evaluation.ASV",
-            "scenario": "semi-informed",
-            "spkid": SPKID_CONFIG,
-            "train": True,
-            "backend": "plda",
-            "train_mean_spkemb": None,
-            "plda_ckpt": None,
-            "save_spkembs": False,
-            "consistent_targets": False,
-            "sample_rate_out": 16000,
-        }
-    }
-)
-FEATPROC_CONFIG = {
-    "dummy": {
-        "cls": "spkanon_eval.featproc.dummy.DummyConverter",
-        "input": {
-            "spectrogram": "spectrogram",
-            "n_frames": "n_frames",
-            "source": "source",
-            "target": "target",
-        },
-        "n_targets": 20,
-    },
-    "output": {"featproc": ["spectrogram", "n_frames", "target"], "featex": []},
-}
-
-
 class TestEvalASV(BaseTestClass):
+    def setUp(self):
+        super().setUp()
+        self.informed_config = OmegaConf.load(
+            "spkanon_eval/config/components/asv/config.yaml"
+        )
+        self.informed_config.asv.backend = "plda"
+        self.informed_config.asv.train_spkid = False
+        # self.informed_config.asv.spkid = OmegaConf.load(
+        #     "spkanon_eval/config/components/asv/spkid/xvector.yaml"
+        # )["spkid"]
+        # del self.informed_config.asv.spkid_cfg
+
+        self.ignorant_config = self.informed_config.copy()
+        self.ignorant_config.asv.scenario = "ignorant"
+        self.spkemb_size = 192
+
     def test_results(self):
         """
         Test whether the ignorant ASV component, when given the ls-dev-clean-2 debug
@@ -89,7 +49,7 @@ class TestEvalASV(BaseTestClass):
         """
 
         # run the experiment with both ASV evaluation scenarios
-        self.init_config.eval.components = ASV_IGNORANT_CONFIG
+        self.init_config.eval.components = self.ignorant_config
         self.init_config.log_dir = os.path.join(self.init_config.log_dir, "asv_test")
         config = run_pipeline(self.init_config)
 
@@ -121,8 +81,8 @@ class TestEvalASV(BaseTestClass):
         """
 
         pca_output_size = 2
-        self.init_config.eval.components = ASV_IGNORANT_CONFIG
-        self.init_config.eval.components.asv_ignorant.reduce_dims = pca_output_size
+        self.init_config.eval.components = self.ignorant_config.copy()
+        self.init_config.eval.components.asv.reduce_dims = pca_output_size
         self.init_config.log_dir = os.path.join(
             self.init_config.log_dir, "asv_test_pca_reduction"
         )
@@ -135,7 +95,7 @@ class TestEvalASV(BaseTestClass):
         plda_path = os.path.join(asv_dir, "train", "plda.pkl")
         plda = pickle.load(open(plda_path, "rb"))
 
-        x = np.random.randn(2, SPKEMB_SIZE)
+        x = np.random.randn(2, self.spkemb_size)
         pca_out = plda.model.pca.transform(x)
         self.assertTrue(pca_out.shape == (2, 2), "PCA output shape is incorrect")
 
@@ -158,10 +118,10 @@ class TestEvalASV(BaseTestClass):
         """
 
         # add the dummy featproc component to the config and random target selection
-        self.init_config.featproc = FEATPROC_CONFIG
+        self.init_config.featproc.dummy.n_targets = 20
         self.init_config.eval.config.seed = self.init_config.seed + 100
-        self.init_config.eval.components = ASV_INFORMED_CONFIG
-        self.init_config.eval.components.asv_informed.consistent_targets = True
+        self.init_config.eval.components = self.informed_config
+        self.init_config.eval.components.asv.consistent_targets = True
         self.init_config.log_dir = os.path.join(
             self.init_config.log_dir, "asv_test_enrollment_targets"
         )
@@ -211,9 +171,10 @@ class TestEvalASV(BaseTestClass):
             "cls": "spkanon_eval.target_selection.random.RandomSelector",
             "consistent_targets": True,
         }
-        self.init_config.featproc = FEATPROC_CONFIG
+        # TODO: move the row below to base config?
+        self.init_config.featproc.dummy.n_targets = 20
         self.init_config.eval.config.seed = self.init_config.seed + 1
-        self.init_config.eval.components = ASV_INFORMED_CONFIG
+        self.init_config.eval.components = self.informed_config
         self.init_config.log_dir = os.path.join(
             self.init_config.log_dir, "asv_test_informed"
         )
@@ -260,12 +221,11 @@ class TestEvalASV(BaseTestClass):
 
         # compute the spkid vecs for the anonymized utterances
         # as is done in spkanon_eval.evaluation.asv.spkid_plda.compute_spkid_vecs
-        spkid_model = setup(config.eval.components.asv_informed.spkid, "cpu")
+        spkid_model = setup(config.eval.components.asv.spkid, "cpu")
         labels = np.array([], dtype=int)  # utterance labels
         vecs = None  # spkid vecs of utterances
 
         spkid_config = copy.deepcopy(config.data.config)
-        spkid_config.batch_size = SPKID_CONFIG["batch_size"]
         spkid_config.sample_rate = EVAL_SR
         dl = setup_dataloader(spkid_model, spkid_config, anon_train_file)
         for batch in dl:

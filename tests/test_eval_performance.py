@@ -33,25 +33,22 @@ class TestEvalPerformance(unittest.TestCase):
         the CPU results, not the GPU results.
         """
 
-        # create/empty experiment folde
+        # create/empty experiment folder
         exp_folder = "spkanon_eval/tests/logs/performance"
         if os.path.isdir(exp_folder):
             shutil.rmtree(exp_folder)
         os.makedirs(os.path.join(exp_folder))
 
-        # run the experiment with both ASV evaluation scenarios
-        self.config = OmegaConf.create(
-            {
-                "repetitions": 2,
-                "sample_rate": 16000,
-                "durations": [2, 3],
-                "data": {
-                    "config": {
-                        "sample_rate_in": 16000,
-                    }
-                },
-            },
+        self.config = OmegaConf.load(
+            "spkanon_eval/config/components/performance/performance_20s.yaml"
+        )["performance"]
+        self.config.data = OmegaConf.load(
+            "/Users/cafr02/repos/spkanon/spkanon_eval/config/datasets/config.yaml"
         )
+        self.config.data.config.sample_rate = 16000
+        self.config.data.config.sample_rate_out = 16000
+        self.config.data.config.sample_rate_in = 16000
+
         evaluator = PerformanceEvaluator(self.config, "cpu", DummyModel())
         evaluator.eval_dir(exp_folder)
         results_dir = os.path.join(exp_folder, "eval", "performance")

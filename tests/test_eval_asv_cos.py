@@ -8,7 +8,6 @@ for the debug data.
 import os
 from shutil import rmtree
 
-
 from omegaconf import OmegaConf
 import numpy as np
 
@@ -20,34 +19,18 @@ from spkanon_eval.evaluate import SAMPLE_RATE as EVAL_SR
 from base import BaseTestClass, run_pipeline
 
 
-SPKEMB_SIZE = 192
-SPKID_CONFIG = {
-    "cls": "spkanon_eval.featex.SpkId",
-    "path": "speechbrain/spkrec-xvect-voxceleb",
-    "ckpt": None,
-    "train": False,
-    "num_workers": 0,
-    "train_config": "spkanon_eval/config/components/asv/spkid/train_xvector.yaml",
-}
-ASV_IGNORANT_CONFIG = OmegaConf.create(
-    {
-        "asv_ignorant": {
-            "cls": "spkanon_eval.evaluation.ASV",
-            "scenario": "ignorant",
-            "spkid": SPKID_CONFIG,
-            "train": False,
-            "backend": "cos",
-            "train_mean_spkemb": None,
-            "plda_ckpt": None,
-            "save_spkembs": False,
-            "consistent_targets": False,
-            "sample_rate_out": 16000,
-        }
-    }
-)
-
-
 class TestEvalASVCos(BaseTestClass):
+    def setUp(self):
+        super().setUp()
+        self.ignorant_config = OmegaConf.load(
+            "spkanon_eval/config/components/asv/config.yaml"
+        )
+        self.ignorant_config.asv.scenario = "ignorant"
+        self.ignorant_config.asv.train = False
+        self.ignorant_config.asv.spkid = OmegaConf.load(
+            "spkanon_eval/config/components/asv/spkid/xvector.yaml"
+        )["spkid"]
+
     def test_results(self):
         """
         Test whether the ignorant ASV component, when given the ls-dev-clean-2 debug
@@ -56,7 +39,7 @@ class TestEvalASVCos(BaseTestClass):
         """
 
         # run the experiment with the ignorant attack scenario
-        self.init_config.eval.components = ASV_IGNORANT_CONFIG
+        self.init_config.eval.components = self.ignorant_config
         self.init_config.log_dir = os.path.join(self.init_config.log_dir, "asv_test")
         config = run_pipeline(self.init_config)
 
@@ -85,7 +68,7 @@ class TestEvalASVCos(BaseTestClass):
         """
 
         # run the experiment with the ignorant attack scenario
-        self.init_config.eval.components = ASV_IGNORANT_CONFIG
+        self.init_config.eval.components = self.ignorant_config
         self.init_config.log_dir = os.path.join(self.init_config.log_dir, "asv_test")
         config = run_pipeline(self.init_config)
 
@@ -99,7 +82,10 @@ class TestEvalASVCos(BaseTestClass):
         seed_everything(self.init_config.seed)
 
         # compute the spkembs of the trial and enrollment utterances
-        spkid_model = setup(OmegaConf.create(SPKID_CONFIG), "cpu")
+        spkid_config = self.ignorant_config.asv.spkid.copy()
+        spkid_config.ckpt = None
+        spkid_config.train = False
+        spkid_model = setup(OmegaConf.create(spkid_config), "cpu")
         df_cfg = OmegaConf.create(
             {
                 "sample_rate_in": EVAL_SR,

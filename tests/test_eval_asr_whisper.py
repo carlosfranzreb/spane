@@ -27,21 +27,28 @@ class TestEvalWhisper(unittest.TestCase):
         os.makedirs(os.path.join(self.exp_folder))
         self.datafile = "spkanon_eval/tests/datafiles/ls-dev-clean-2.txt"
 
-        config = OmegaConf.create(
-            {
-                "train": False,
-                "size": "tiny",
-                "output": "text",
-                "batch_size": 4,
-                "data": {
-                    "config": {
-                        "sample_rate_in": 16000,
-                        "num_workers": 0,
-                        "chunk_sizes": {"ls-dev-clean-2": {100: 1}},
-                    },
-                },
-            }
-        )
+        # config = OmegaConf.create(
+        #     {
+        #         "train": False,
+        #         "size": "tiny",
+        #         "output": "text",
+        #         "batch_size": 4,
+        #         "data": {
+        #             "config": {
+        #                 "sample_rate_in": 16000,
+        #                 "num_workers": 0,
+        #                 "chunk_sizes": {"ls-dev-clean-2": {100: 1}},
+        #             },
+        #         },
+        #     }
+        # )
+        config = OmegaConf.load("spkanon_eval/config/components/asr/whisper_tiny.yaml")[
+            "whisper_tiny"
+        ]
+        config.data = OmegaConf.load("spkanon_eval/config/datasets/config.yaml")
+        config.data.config.sample_rate = 16000
+        config.data.config.sample_rate_out = 16000
+        config.data.config.sample_rate_in = 16000
         self.whisper = Whisper(config, "cpu")
         self.whisper.eval_dir(self.exp_folder, self.datafile)
         self.results_dir = os.path.join(self.exp_folder, "eval", "whisper-tiny")

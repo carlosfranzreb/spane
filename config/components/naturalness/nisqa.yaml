@@ -3,3 +3,4 @@ naturalness_nisqa:
   init: spkanon_eval/NISQA/weights/nisqa_tts.tar
   train: false
   num_workers: ${data.config.num_workers}
+  batch_size: 32

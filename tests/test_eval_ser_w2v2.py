@@ -16,15 +16,9 @@ class TestEvalSer(BaseTestClass):
         """
 
         # run the experiment with both ASV evaluation scenarios
-        self.init_config.eval.components = {
-            "audeering_w2v": {
-                "cls": "spkanon_eval.evaluation.ser.audeering_w2v.EmotionEvaluator",
-                "init": "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim",
-                "train": False,
-                "num_workers": 0,
-                "root_folder": "${data.config.root_folder}",
-            }
-        }
+        self.init_config.eval.components = OmegaConf.load(
+            "spkanon_eval/config/components/ser/audeering_w2v.yaml"
+        )
         self.init_config.log_dir = os.path.join(self.init_config.log_dir, "eval_ser")
         config = run_pipeline(self.init_config)
         results_dir = os.path.join(config.exp_folder, "eval", "ser-audeering-w2v")

@@ -1,2 +1,0 @@
-dataset gender n_pairs threshold eer
-anon_eval F 6 0.8639485868776386 0.8333333333333333

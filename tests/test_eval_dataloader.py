@@ -17,30 +17,17 @@ class TestEvalDataloader(unittest.TestCase):
         - Get the test datafiles.
         """
         self.datafile = "spkanon_eval/tests/datafiles/ls-dev-clean-2.txt"
-        self.sample_rate = 16000
-        self.config = OmegaConf.create(
-            {
-                "num_workers": 0,
-                "sample_rate": self.sample_rate,
-                "sample_rate_in": self.sample_rate + 8000,
-                "sample_rate_out": self.sample_rate,
-            }
-        )
         self.device = "cpu"
+        self.config = OmegaConf.load("spkanon_eval/config/datasets/config.yaml")[
+            "config"
+        ]
+        self.config.sample_rate = 16000
+        self.config.sample_rate_out = 16000
+        self.config.sample_rate_in = 24000
 
-        whisper_config = OmegaConf.create(
-            {
-                "train": False,
-                "size": "tiny",
-                "output": "text",
-                "data": {
-                    "config": {
-                        "sample_rate": self.sample_rate,
-                        "num_workers": 0,
-                    },
-                },
-            }
-        )
+        whisper_config = OmegaConf.load(
+            "spkanon_eval/config/components/asr/whisper_tiny.yaml"
+        )["whisper_tiny"]
         self.model = Whisper(whisper_config, self.device)
 
     def test_eval_dataloader(self):

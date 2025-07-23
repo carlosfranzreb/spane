@@ -21,4 +21,4 @@ git clone https://github.com/gabrielmittag/NISQA.git
 cd ..
 
 # run tests
-# python -m unittest discover -s spkanon_eval/tests -p "test_*.py"
+python -m unittest discover -s spkanon_eval/tests -p "test_*.py"

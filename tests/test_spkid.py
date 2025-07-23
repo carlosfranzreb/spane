@@ -11,10 +11,11 @@ import copy
 
 from omegaconf import OmegaConf
 import torch
+from torch.nn.utils.rnn import pad_sequence
+from torch import Tensor
 
 from spkanon_eval.featex import SpkId
 from spkanon_eval.featex import SpkIdConcat
-from spkanon_eval.datamodules.collator import collate_fn
 from spkanon_eval.datamodules.dataset import load_audio
 from spkanon_eval.utils import seed_everything
 
@@ -35,37 +36,43 @@ class TestSpkid(unittest.TestCase):
                 "path": "speechbrain/spkrec-xvect-voxceleb",
                 "emb_model_ckpt": None,
                 "num_workers": 0,
-                "train_config": "spkanon_eval/config/components/spkid/train_xvec_debug.yaml",
+                "train_config": "spkanon_eval/config/components/asv/spkid/train_xvector_debug.yaml",
             }
         )
         self.data_dir = "spkanon_eval/tests/data/LibriSpeech/dev-clean-2/1988/24833"
 
+    def get_batch(self, samples: list[str]) -> list[Tensor, Tensor, Tensor]:
+        """Return a batch given the samples."""
+        audios, speakers = list(), list()
+        for sample in samples:
+            audios.append(load_audio(os.path.join(self.data_dir, sample), SAMPLE_RATE))
+            speakers.append(0)
+
+        return [
+            pad_sequence(audios, batch_first=True),
+            torch.tensor([audio.shape[0] for audio in audios]),
+            torch.tensor(speakers),
+        ]
+
     def test_batches(self):
-        """
-        Ensure that batching works with the x-vector model.
-        """
+        """Ensure that batching works with the x-vector model."""
 
         model = SpkId(self.cfg, "cpu")
 
         # test with batches of 1 sample
+        spk = torch.tensor([0], dtype=torch.int64)
         with self.subTest("1 sample"):
             for audiofile in os.listdir(self.data_dir):
                 audio = load_audio(os.path.join(self.data_dir, audiofile), SAMPLE_RATE)
                 audio = torch.tensor(audio).unsqueeze(0)
                 length = torch.tensor([audio.shape[1]], dtype=torch.int64)
-                spk = torch.tensor([0], dtype=torch.int64)
 
                 emb = model.run((audio, spk, length))
                 self.assertTrue(emb.shape == (1, 512))
 
         # test with one batch of 2 samples
         samples = os.listdir(self.data_dir)[:2]
-        batch = list()
-        spk = torch.tensor(1)
-        for sample in samples:
-            audio = load_audio(os.path.join(self.data_dir, sample), SAMPLE_RATE)
-            batch.append([audio, spk, audio.shape[0]])
-        batch = collate_fn(batch)
+        batch = self.get_batch(samples)
 
         emb = model.run(batch)
         with self.subTest("2 samples"):
@@ -87,22 +94,15 @@ class TestSpkid(unittest.TestCase):
         )
         concat_model = SpkIdConcat(concat_cfg, "cpu")
         samples = os.listdir(self.data_dir)[:2]
-        batch = list()
-        spk = torch.tensor(1)
-        for sample in samples:
-            audio = load_audio(os.path.join(self.data_dir, sample), SAMPLE_RATE)
-            batch.append([audio, spk, audio.shape[0]])
-        batch = collate_fn(batch)
+        batch = self.get_batch(samples)
 
         out = concat_model.run(batch)
         self.assertEqual(list(out.shape), expected_shape)
 
-    def test_finetune(self):
-        """
-        Test that the spkid model correctly fine-tunes on the given datafile.
-        ! We assume that the val_ratio is 0.4.
-        """
-        exp_folder = "spkanon_eval/tests/logs/spkid_finetune"
+    def test_train(self):
+        """Test that the spkid model is trained on the given datafile."""
+
+        exp_folder = "spkanon_eval/tests/logs/spkid_train"
         if os.path.isdir(exp_folder):
             shutil.rmtree(exp_folder)
         os.makedirs(os.path.join(exp_folder))
@@ -119,7 +119,7 @@ class TestSpkid(unittest.TestCase):
             expected_samples[obj["path"]] = obj
 
         # check the train and val samples
-        for split_file, n_lines in zip(["train.csv", "val.csv"], [17, 6]):
+        for split_file, n_lines in zip(["train.csv", "val.csv"], [18, 5]):
             with open(os.path.join(exp_folder, split_file)) as f:
                 train_lines = f.readlines()
             self.assertEqual(len(train_lines), n_lines)

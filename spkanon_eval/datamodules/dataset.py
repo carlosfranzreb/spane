@@ -56,14 +56,9 @@ class SpeakerIdDataset(Dataset):
     def __len__(self) -> int:
         return len(self.data)
 
-    def __getitem__(self, sample_idx: int) -> tuple[Tensor, Tensor, Tensor]:
-        """
-        Return the `sample_idx`-th sample of the dataset. The id is the index of the
-        sample when considering all the datafiles as a single dataset. The item is
-        returned as a tuple of (audio, speaker, n_samples), where the audio is
-        resampled to the given sampling rate.
-        """
-        objs = self.data[sample_idx]
+    def __getitem__(self, batch_idx: int) -> tuple[Tensor, Tensor, Tensor]:
+        """Return the `batch_idx`-th batch of the dataset."""
+        objs = self.data[batch_idx]
         audios = [load_audio(obj["path"], self.sample_rate) for obj in objs]
         speaker_ids = tensor([int(obj["speaker_id"]) for obj in objs])
         audio_lens = tensor([audio.shape[0] for audio in audios])

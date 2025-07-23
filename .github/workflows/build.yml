@@ -12,17 +12,28 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        shell: bash -l {0}
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v3
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Conda Environment
+        uses: conda-incubator/setup-miniconda@v3
         with:
           python-version: "3.11"
-      - name: Add conda to system path
+          auto-update-conda: true
+          activate-environment: "" 
+
+      - name: Build and Test Project
         run: |
-          # $CONDA is an environment variable pointing to the root of the miniconda directory
-          echo $CONDA/bin >> $GITHUB_PATH
-      - name: Build & test project
-        run: |
-          cd ..
-          bash spkanon_eval/build/framework.sh
+          conda install -y 'ffmpeg<5'
+          pip install --no-input --upgrade pip
+          pip install --no-input .
+          git clone https://github.com/gabrielmittag/NISQA.git ./spkanon_eval/NISQA
+          python -m unittest discover -s ./spkanon_eval/tests -p "test_*.py"

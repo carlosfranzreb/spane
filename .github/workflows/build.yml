@@ -34,6 +34,7 @@ jobs:
         uses: tj-actions/coverage-badge-py@v2
         with:
           working-directory: ..
+          output: ./spkanon_eval/coverage.svg
 
       - name: Verify Changed files
         uses: tj-actions/verify-changed-files@v16

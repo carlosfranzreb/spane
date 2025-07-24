@@ -113,7 +113,7 @@ def inference_time(
 
     for duration in durations:
         n_samples = int(sample_rate * duration)
-        audio_chunk = map_audio_to_dur(audio, n_samples)
+        map_audio_to_dur(audio, n_samples)
         timings = func(model, audio, 1, repetitions)
 
         # dump the mean and std of the inference time

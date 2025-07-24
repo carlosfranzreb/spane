@@ -242,10 +242,3 @@ class TestTrialsEnrolls(unittest.TestCase):
             f = os.path.join(self.exp_folder, "data", f"eval_{split}.txt")
             if os.path.exists(f):
                 os.remove(f)
-
-    def check_durations_order(self, objects: list[dict], error_msg: str = None):
-        """Check that the objects are sorted by duration in reverse order."""
-        last_dur = float("inf")
-        for obj in objects:
-            self.assertTrue(obj["duration"] < last_dur, error_msg)
-            last_dur = obj["duration"]

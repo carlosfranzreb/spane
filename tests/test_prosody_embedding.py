@@ -1,6 +1,5 @@
 import unittest
 
-import numpy as np
 import torch
 import torchaudio
 from omegaconf import OmegaConf

@@ -64,10 +64,10 @@ class TestEvalPerformance(unittest.TestCase):
             # for `cpu_specs.txt`, compare it with the CPU in this machine
             if fname == "cpu_specs.txt":
                 f_expected = os.path.join(results_dir, fname)
-                os = sys.platform
-                if os == "darwin":
+                operating_system = sys.platform
+                if operating_system == "darwin":
                     os.system(f"sysctl -a | grep machdep.cpu > {f_expected}")
-                elif os == "linux":
+                elif operating_system == "linux":
                     os.system(f"lscpu > {f_expected}")
                 else:
                     raise NotImplementedError("Unsupported operating system.")

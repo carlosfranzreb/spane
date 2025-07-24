@@ -42,9 +42,7 @@ class TestEvalPerformance(unittest.TestCase):
         self.config = OmegaConf.load(
             "spkanon_eval/config/components/performance/performance_20s.yaml"
         )["performance"]
-        self.config.data = OmegaConf.load(
-            "/Users/cafr02/repos/spkanon/spkanon_eval/config/datasets/config.yaml"
-        )
+        self.config.data = OmegaConf.load("spkanon_eval/config/datasets/config.yaml")
         self.config.data.config.sample_rate = 16000
         self.config.data.config.sample_rate_out = 16000
         self.config.data.config.sample_rate_in = 16000

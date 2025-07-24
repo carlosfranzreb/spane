@@ -6,8 +6,8 @@ DESCRIPTION = "Speaker anonymization Evaluation (SpAnE)"
 URL = "https://github.com/carlosfranzreb/spkanon_eval"
 EMAIL = "carlos.franzreb@dfki.de"
 AUTHOR = "Carlos Franzreb"
-REQUIRES_PYTHON = ">=3.9.0"
-VERSION = "0.3.0"
+REQUIRES_PYTHON = ">=3.10.0"
+VERSION = "1.0.0"
 
 
 def req_file(filename: str) -> list[str]:

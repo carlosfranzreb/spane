@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - better_batches
   pull_request:
     branches:
       - master

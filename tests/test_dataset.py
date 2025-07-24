@@ -57,7 +57,7 @@ class TestDataset(unittest.TestCase):
             durations.append(int(audios[-1].shape[0]))
 
         dataset = SpeakerIdDataset(self.datafile, self.sample_rate, {12: 2, 4: 3})
-        expected_sizes = [2, 2, 2, 3, 1]
+        expected_sizes = [12, 2, 2, 3, 1]
         sample_idx = 0
         for batch_idx, batch in enumerate(dataset):
             self.assertEqual(batch[1].shape[0], expected_sizes[batch_idx])

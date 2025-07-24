@@ -17,7 +17,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Build and Test Project
+      - name: Build and test
         run: |
           cd ..
           bash ./spkanon_eval/build/framework.sh

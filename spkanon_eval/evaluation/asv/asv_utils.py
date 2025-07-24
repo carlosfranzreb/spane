@@ -81,7 +81,6 @@ def analyse_results(datafile: str, llr_file: str) -> None:
         f.write(f"{fname} {llrs.size} {thresholds[key]} {eer}\n")
     # dump the ROC curve
     RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
-    plt.plot([1, 0], [0, 1], "k--")
     plt.savefig(os.path.join(dump_folder, "roc_curve.png"))
 
     # store the spk label for each value of each speaker char.

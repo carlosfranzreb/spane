@@ -1,8 +1,14 @@
+"""
+This work was done by Jakob Segerath as part of his Bachelor thesis.
+His implementation and GitHub profile can be found in the following link:
+<https://github.com/jakseg/spkanon_eval>
+"""
+
 import parselmouth
 import numpy as np
 import logging
 import torch
-from omegaconf import OmegaConf
+from omegaconf import DictConfig
 from spkanon_eval.component_definitions import InferComponent
 
 LOGGER = logging.getLogger("progress")
@@ -10,10 +16,9 @@ LOGGER = logging.getLogger("progress")
 
 class ProsodyEmbedding(InferComponent):
 
-    def __init__(self, config: OmegaConf, device: str) -> None:
+    def __init__(self, config: DictConfig, device: str) -> None:
         """
         Initialize the prosody embedding model with the given configuration from ecapa.yaml
-        TODO: test this class
         """
         self.device = device
         self.config = config
@@ -481,6 +486,6 @@ class ProsodyEmbedding(InferComponent):
                 np.concatenate(all_features).flatten() if all_features else np.array([])
             )
         else:
-            raise ValueError(f"Unbekannte Segmentierungsmethode: {segmentation_method}")
+            raise ValueError(f"Unknown segmentation: {segmentation_method}")
 
         return final_embedding

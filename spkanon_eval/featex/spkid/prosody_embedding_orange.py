@@ -1,8 +1,6 @@
-import parselmouth
-import numpy as np
 import logging
 import torch
-from omegaconf import OmegaConf
+from omegaconf import DictConfig
 
 from spkanon_eval.evaluate import SAMPLE_RATE
 from spkanon_eval.component_definitions import InferComponent
@@ -14,7 +12,7 @@ LOGGER = logging.getLogger("progress")
 
 class ProsodyEmbeddingOrange(InferComponent):
 
-    def __init__(self, config: OmegaConf, device: str):
+    def __init__(self, config: DictConfig, device: str):
         self.emb_model = EmbeddingsModel.from_pretrained("Orange/Speaker-wavLM-pro")
         self.emb_model.eval()
         self.emb_model.to(device)
@@ -35,6 +33,6 @@ class ProsodyEmbeddingOrange(InferComponent):
         Returns:
             A tensor containing the prosody embeddings with shape
             (batch_size, embedding_dim).
-        
+
         """
-        return self.emb_model(batch[0].to(self.device)[:, :int(20 * SAMPLE_RATE)])
+        return self.emb_model(batch[0].to(self.device)[:, : int(20 * SAMPLE_RATE)])

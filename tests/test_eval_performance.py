@@ -8,6 +8,7 @@ for the debug data.
 import os
 import unittest
 import shutil
+import platform
 
 from omegaconf import OmegaConf
 import torch
@@ -63,7 +64,10 @@ class TestEvalPerformance(unittest.TestCase):
             # for `cpu_specs.txt`, compare it with the CPU in this machine
             if fname == "cpu_specs.txt":
                 f_expected = os.path.join(results_dir, fname)
-                os.system(f"sysctl -a | grep machdep.cpu > {f_expected}")
+                if platform.system() == "Darwin":
+                    os.system(f"sysctl -a | grep machdep.cpu > {f_expected}")
+                elif platform.system() == "Linux":
+                    os.system(f"cat /proc/cpuinfo > {f_expected}")
                 with open(os.path.join(results_dir, fname)) as f:
                     expected = f.readlines()
                 with self.subTest(fname=fname):

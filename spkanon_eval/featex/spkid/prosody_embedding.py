@@ -13,6 +13,7 @@ class ProsodyEmbedding(InferComponent):
     def __init__(self, config: OmegaConf, device: str) -> None:
         """
         Initialize the prosody embedding model with the given configuration from ecapa.yaml
+        TODO: test this class
         """
         self.device = device
         self.config = config

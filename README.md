@@ -1,8 +1,9 @@
 # Speaker Anonymization Evaluation (SpAnE)
 
 ![Build and test](https://github.com/carlosfranzreb/spkanon_eval/actions/workflows/build.yml/badge.svg)
+![coverage badge](./coverage.svg)
 
-Evaluation framework for speaker anonymization models.
+Evaluation framework for speaker anonymizers.
 
 ## Installation
 

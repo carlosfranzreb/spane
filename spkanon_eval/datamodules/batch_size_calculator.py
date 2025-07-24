@@ -1,8 +1,10 @@
 """
 Class that computes the max. batch size that fits into GPU memory.
 
-It stores previous computations to avoid recomputing the same chunk size for the 
+It stores previous computations to avoid recomputing the same chunk size for the
 same model and sample rate.
+
+TODO: test this class
 """
 
 import logging
@@ -132,7 +134,7 @@ def max_batch_size(model: Anonymizer, audio: torch.Tensor, batch_size: int = 1) 
     """Estimate the max. batch size for the given audio tensor."""
     total_memory = torch.cuda.get_device_properties(0).total_memory
     out_size = 1
-    
+
     while True:
         audio_batch = audio.unsqueeze(0).repeat(batch_size, 1)
         batch = [
@@ -144,10 +146,7 @@ def max_batch_size(model: Anonymizer, audio: torch.Tensor, batch_size: int = 1) 
         torch.cuda.reset_peak_memory_stats()
         try:
             if hasattr(model, "forward"):
-                data = [
-                    {"speaker_id": val.item(), "gender": True}
-                    for val in batch[1]
-                ]
+                data = [{"speaker_id": val.item(), "gender": True} for val in batch[1]]
                 model.forward(batch, data)
             else:
                 with torch.no_grad():
@@ -168,6 +167,6 @@ def max_batch_size(model: Anonymizer, audio: torch.Tensor, batch_size: int = 1) 
             else:
                 LOGGER.error(error)
                 raise error
-    
+
     reset(model)
     return out_size

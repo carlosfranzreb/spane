@@ -21,3 +21,6 @@ jobs:
         run: |
           cd ..
           bash ./spkanon_eval/build/framework.sh
+
+      - name: Coverage badge
+        uses: tj-actions/coverage-badge-py@v2

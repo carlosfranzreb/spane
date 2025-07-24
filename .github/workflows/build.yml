@@ -1,4 +1,5 @@
-name: Build
+# TODO: only run this if Python files or this workflow changed.
+name: Build and test with coverage
 
 on:
   push:
@@ -24,3 +25,5 @@ jobs:
 
       - name: Coverage badge
         uses: tj-actions/coverage-badge-py@v2
+        with:
+          working-directory: ..

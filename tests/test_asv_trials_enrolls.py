@@ -8,7 +8,6 @@ from spkanon_eval.evaluation.asv.trials_enrolls import split_trials_enrolls
 
 class TestTrialsEnrolls(unittest.TestCase):
     def setUp(self):
-
         # create/empty experiment folder
         self.exp_folder = "spkanon_eval/tests/logs/split_trials_enrolls"
         if os.path.isdir(self.exp_folder):

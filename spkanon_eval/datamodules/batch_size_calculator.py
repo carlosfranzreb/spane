@@ -84,7 +84,6 @@ class BatchSizeCalculator:
         for chunk_max_dur in tqdm(
             torch.linspace(max_dur, min_dur, self.n_chunks + 1)[:-1]
         ):
-
             # check if the chunk size has already been computed
             if not first_time:
                 found = False

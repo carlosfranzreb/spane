@@ -8,7 +8,6 @@ from spkanon_eval.featex import ProsodyEmbedding
 
 
 class TestProsodyEmbedding(unittest.TestCase):
-
     def setUp(self):
         """Set up test configuration and mock audio data."""
         # Create test configuration

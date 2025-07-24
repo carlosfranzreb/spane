@@ -148,7 +148,6 @@ def run_gpu(
     """
 
     with torch.no_grad():
-
         # batch comprises a signal, a speaker label and the audio length
         audio_batch = audio.unsqueeze(0).repeat(batch_size, 1)
         batch = [

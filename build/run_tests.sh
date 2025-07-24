@@ -10,7 +10,7 @@ if [ $? -eq 1 ]; then
 else
     message="[Policy] Passed unit tests."
     echo -e "\033[1;32mOK: $message\033[0m"
-    coverage combine -m
+    coverage combine
     coverage report -m --include="spkanon_eval/*"
     exit 0
 fi

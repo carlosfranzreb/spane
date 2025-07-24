@@ -13,5 +13,5 @@ matplotlib>=3.5.1
 
 # dev dependencies
 ruff==0.12.4
-black>=19.10b0
 coverage==7.9.2
+pre-commit==4.2.0

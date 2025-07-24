@@ -39,8 +39,6 @@ class NisqaEvaluator(EvalComponent):
         Args:
             exp_folder: path to the experiment folder
             datafile: datafile to evaluate
-
-        TODO: calculate batch size with batch_size_calculator
         """
 
         # create the dump folder and the file that stores the EERs

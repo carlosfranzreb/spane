@@ -2,7 +2,7 @@ import os
 import logging
 import copy
 
-from omegaconf import OmegaConf
+from omegaconf import DictConfig
 
 from spkanon_eval.setup_module import setup
 from spkanon_eval.utils import seed_everything
@@ -13,7 +13,7 @@ SAMPLE_RATE = 16000  # sample rate for evaluation
 LOGGER = logging.getLogger("progress")
 
 
-def evaluate(exp_folder: str, model: Anonymizer, config: OmegaConf) -> None:
+def evaluate(exp_folder: str, model: Anonymizer, config: DictConfig) -> None:
     """
     Evaluate the given experiment with the components defined in the config. Components
     may be trained before the evaluation.
@@ -21,7 +21,7 @@ def evaluate(exp_folder: str, model: Anonymizer, config: OmegaConf) -> None:
     Args:
         exp_folder: path to the experiment folder
         model: the anonymizer model
-        config: the config object, as defined in the documentation (TODO)
+        config: the config defining the evaluation components
     """
 
     # change the RNG seed if required

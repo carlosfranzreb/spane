@@ -1,94 +1,3 @@
-# General information:
-# possible values for f0 and energy: "all", "first" or "last"
-# possible values for segmentation_method: "pitch" or "relative"
-
-# Config 1 
-# Relative segmentation - my result: original data - 0.4048076923076923 - anonymized data - 0.5128205128205128
-# spkid:
-#   cls: spkanon_eval.featex.ProsodyEmbedding
-#   pitch_floor: 50  
-#   pitch_floor_for_segmentation: 75
-#   pitch_ceiling: 600
-#   sampling_frequency: 16000
-#   time_step: 0.01
-#   batch_size: 32
-#   segmentation_method: "relative" 
-#   feature_segments:
-#     f0: "first"      
-#     energy: "first" 
-#   num_workers: ${data.config.num_workers}
-#   train: false
-
-# Config 2 
-# Relative segmentation- my result: original data - 0.4211538461538462 anonymized data - 0.475
-# spkid:
-#   cls: spkanon_eval.featex.ProsodyEmbedding
-#   pitch_floor: 50  
-#   pitch_floor_for_segmentation: 75
-#   pitch_ceiling: 600 
-#   sampling_frequency: 16000
-#   time_step: 0.01
-#   batch_size: 32
-#   segmentation_method: "relative" 
-#   feature_segments:
-#     f0: "last"      
-#     energy: "last" 
-#   num_workers: ${data.config.num_workers}
-#   train: false
-
-# Config 3 
-# Relative segmentation - my result: original data - 0.3961538461538462 anonymized data - 0.4996794871794872
-# spkid:
-#   cls: spkanon_eval.featex.ProsodyEmbedding
-#   pitch_floor: 50  
-#   pitch_floor_for_segmentation: 75
-#   pitch_ceiling: 600 
-#   sampling_frequency: 16000
-#   time_step: 0.01
-#   batch_size: 32
-#   segmentation_method: "relative" 
-#   feature_segments:
-#     f0: "all"      
-#     energy: "all" 
-#   num_workers: ${data.config.num_workers}
-#   train: false
-
-# Config 4 
-# Segmentation based on f0 - my result: original data - 0.22115384615384615 anonymized data - 0.444551282051282
-# spkid:
-#   cls: spkanon_eval.featex.ProsodyEmbedding
-#   pitch_floor: 50  
-#   pitch_floor_for_segmentation: 75
-#   pitch_ceiling: 600 
-#   sampling_frequency: 16000
-#   time_step: 0.01
-#   batch_size: 32
-#   segmentation_method: "pitch" 
-#   feature_segments:
-#     f0: ""      
-#     energy: "" 
-#   num_workers: ${data.config.num_workers}
-#   train: false
-
-# Config 5 
-# Segmentation based on f0 - my result: original data - 0.20608974358974358 anonymized data - 0.46474358974358976
-# spkid:
-#   cls: spkanon_eval.featex.ProsodyEmbedding
-#   pitch_floor: 75
-#   pitch_floor_for_segmentation: 50
-#   pitch_ceiling: 700
-#   sampling_frequency: 16000
-#   time_step: 0.01
-#   batch_size: 32
-#   segmentation_method: "pitch" 
-#   feature_segments:
-#     f0: ""      
-#     energy: "" 
-#   num_workers: ${data.config.num_workers}
-#   train: false
-
-# Config 6
-# Segmentation based on f0 - my result: original data - 0.20288461538461536 anonymized data - 0.4705128205128205
 spkid:
   cls: spkanon_eval.featex.ProsodyEmbedding
   pitch_floor: 75
@@ -97,9 +6,9 @@ spkid:
   sampling_frequency: 16000
   time_step: 0.01
   batch_size: 32
-  segmentation_method: "pitch" 
+  segmentation_method: "pitch"
   feature_segments:
-    f0: ""     
-    energy: "" 
+    f0: ""
+    energy: ""
   num_workers: ${data.config.num_workers}
   train: false

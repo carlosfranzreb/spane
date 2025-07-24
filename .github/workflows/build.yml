@@ -1,4 +1,3 @@
-# TODO: only run this if Python files or this workflow changed.
 name: Build and test
 
 on:

@@ -3,8 +3,6 @@ Class that computes the max. batch size that fits into GPU memory.
 
 It stores previous computations to avoid recomputing the same chunk size for the
 same model and sample rate.
-
-TODO: test this class
 """
 
 import logging

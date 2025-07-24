@@ -61,7 +61,7 @@ class BaseTestClass(unittest.TestCase):
                             "source": "source",
                             "target": "target",
                         },
-                        "n_targets": 10,
+                        "n_targets": 20,
                     },
                     "output": {
                         "featex": [],

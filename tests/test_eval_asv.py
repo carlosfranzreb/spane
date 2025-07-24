@@ -41,6 +41,9 @@ class TestEvalASV(BaseTestClass):
         self.ignorant_config.asv.scenario = "ignorant"
         self.spkemb_size = 192
 
+    def tearDown(self):
+        rmtree(self.init_config.log_dir)
+
     def test_results(self):
         """
         Test whether the ignorant ASV component, when given the ls-dev-clean-2 debug
@@ -69,8 +72,6 @@ class TestEvalASV(BaseTestClass):
             self.assertTrue(isinstance(float(out[2]), float))
             self.assertTrue(0 <= float(out[3]) <= 1)
 
-        rmtree(self.init_config.log_dir)  # TODO: should this be in tearDown everywhere?
-
     def test_pca_reduction(self):
         """
         Ensure that, when defined in the config, the PCA algorithm embedded in the PLDA
@@ -98,8 +99,6 @@ class TestEvalASV(BaseTestClass):
         x = np.random.randn(2, self.spkemb_size)
         pca_out = plda.model.pca.transform(x)
         self.assertTrue(pca_out.shape == (2, 2), "PCA output shape is incorrect")
-
-        rmtree(self.init_config.log_dir)
 
     def test_enrollment_targets(self):
         """
@@ -154,8 +153,6 @@ class TestEvalASV(BaseTestClass):
             found_difference, "All inference and enrollment targets are the same"
         )
 
-        rmtree(self.init_config.log_dir)
-
     def test_informed_asv(self):
         """
         In the semi-informed scenario, the ASV system is trained with anonymized
@@ -171,8 +168,6 @@ class TestEvalASV(BaseTestClass):
             "cls": "spkanon_eval.target_selection.random.RandomSelector",
             "consistent_targets": True,
         }
-        # TODO: move the row below to base config?
-        self.init_config.featproc.dummy.n_targets = 20
         self.init_config.eval.config.seed = self.init_config.seed + 1
         self.init_config.eval.components = self.informed_config
         self.init_config.log_dir = os.path.join(
@@ -253,5 +248,3 @@ class TestEvalASV(BaseTestClass):
                 ),
                 f"The attribute {attr} of the PLDA models differ",
             )
-
-        rmtree(self.init_config.log_dir)

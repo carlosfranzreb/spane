@@ -1,5 +1,5 @@
 # TODO: only run this if Python files or this workflow changed.
-name: Build and test with coverage
+name: Build and test
 
 on:
   push:
@@ -34,3 +34,24 @@ jobs:
         uses: tj-actions/coverage-badge-py@v2
         with:
           working-directory: ..
+
+      - name: Verify Changed files
+        uses: tj-actions/verify-changed-files@v16
+        id: verify-changed-files
+        with:
+          files: coverage.svg
+
+      - name: Commit badge
+        if: steps.verify-changed-files.outputs.files_changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add coverage.svg
+          git commit -m "Update coverage.svg"
+
+      - name: Push changes
+        if: steps.verify-changed-files.outputs.files_changed == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.github_token }}
+          branch: ${{ github.ref }}

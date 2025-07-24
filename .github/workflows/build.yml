@@ -27,3 +27,4 @@ jobs:
         uses: tj-actions/coverage-badge-py@v2
         with:
           working-directory: ..
+          include: "spkanon_eval/*"

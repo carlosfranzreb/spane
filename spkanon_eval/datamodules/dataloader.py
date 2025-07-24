@@ -1,64 +1,74 @@
 import json
-import os
 import logging
 from collections.abc import Iterable
 
-import torch
+from torch import Tensor
 from torch.utils.data import DataLoader
-from omegaconf import OmegaConf
+from omegaconf import DictConfig
 
-from spkanon_eval.datamodules.dataset import SpeakerIdDataset
-from spkanon_eval.datamodules.collator import collate_fn
-
+from spkanon_eval.datamodules import SpeakerIdDataset, BatchSizeCalculator
 
 LOGGER = logging.getLogger("progress")
+bs_calculator = BatchSizeCalculator()
 
 
-def setup_dataloader(config: OmegaConf, datafile: str) -> DataLoader:
+def setup_dataloader(model, config: DictConfig, datafile: str) -> DataLoader:
     """
     Create a dataloader with the SpeakerIdDataset.
     """
 
     LOGGER.info(f"Creating dataloader for {datafile}")
-    LOGGER.info(f"\tSample rate: {config.sample_rate}")
-    LOGGER.info(f"\tBatch size: {config.batch_size}")
+    LOGGER.info(f"\tModel: {model.__class__.__name__}")
+    LOGGER.info(f"\tSample rate: {config.sample_rate_in}")
     LOGGER.info(f"\tNum. workers: {config.num_workers}")
 
+    try:
+        max_ratio = config.max_ratio
+    except Exception:
+        max_ratio = 0.7
+
+    chunk_sizes = bs_calculator.calculate(
+        datafile, model, config.sample_rate_in, max_ratio
+    )
     return DataLoader(
-        dataset=SpeakerIdDataset(datafile, config.sample_rate),
-        batch_size=config.batch_size,
-        collate_fn=collate_fn,
+        dataset=SpeakerIdDataset(datafile, config.sample_rate_in, chunk_sizes),
         num_workers=config.num_workers,
+        batch_size=None,
     )
 
 
 def eval_dataloader(
-    config: OmegaConf, datafile: str, device: str
-) -> Iterable[str, list[torch.Tensor], dict[str, str]]:
+    config: DictConfig, datafile: str, model
+) -> Iterable[str, list[Tensor], dict[str, str]]:
     """
     This function is called by evaluation and inference scripts. It is an
     iterator over the batches and other sample info in the given manifest.
 
     - The data is not shuffled, so it can be mapped to the audio file paths, which
         they require to generate their results/reports.
-    - Return all additional data found in the manifest file, if any. This can be the
-        gender of the speaker, for example.
+    - Return all additional data found in the manifest file, e.g. gender, speaker_id.
+
+    Args:
+        config: the configuration object
+        datafile: the path to the manifest file
+        model: the model to evaluate
+        max_ratio: the ratio of the GPU memory to use (see `BatchSizeCalculator`)
     """
     LOGGER.info(f"Creating eval. DL for `{datafile}`")
 
     # initialize the dataloader and the iterator object for the sample data
-    dl = setup_dataloader(config, datafile)
+    dl = setup_dataloader(model, config, datafile)
     data_iter = data_iterator(datafile)
 
     # iterate over the batches in the dataloader
     for batch in dl:
-        batch = [b.to(device) for b in batch]
+        batch = [b.to(model.device) for b in batch]
         data = list()  # additional data to be returned
         # read as much `data` as there are samples in the batch
         while len(data) < batch[0].shape[0]:
             data.append(next(data_iter))
         # yield the batch, the datafile and the additional data
-        yield datafile, batch, data
+        yield batch, data
 
 
 def data_iterator(datafile: str) -> Iterable[dict]:

@@ -1,11 +1,25 @@
 import torch
+from torch import Tensor
 
-from spkanon_eval.target_selection.base import BaseSelector
+from .base import BaseSelector
 
 
 class RandomSelector(BaseSelector):
-    def select_new(self, spec: torch.Tensor) -> torch.Tensor:
+    def select_new(self, source_data: Tensor, source_is_male: Tensor) -> Tensor:
         """
-        Randomly select a target for the given input spectrogram.
+        Randomly select a target for the given input source_data.
         """
-        return torch.randint(0, len(self.vecs), (spec.shape[0],), device=spec.device)
+        device = source_data.device
+        target_mask = self.get_candidate_target_mask(source_is_male).to(device)
+        targets = torch.zeros(
+            source_is_male.shape[0], dtype=torch.int64, device=device
+        )
+
+        for idx in range(source_is_male.shape[0]):
+            candidate_indices = target_mask[:, idx].nonzero().flatten()
+            sampled_candidate_idx = candidate_indices[
+                torch.randint(candidate_indices.shape[0], (1,))
+            ]
+            targets[idx] = sampled_candidate_idx
+
+        return targets

@@ -1,0 +1,14 @@
+# for running the privacy evaluation only
+# only the utterances required by the privacy evaluation are anonymized
+data:
+  config_cfg: spkanon_eval/config/datasets/config.yaml
+  datasets:
+    eval:
+      - spkanon_eval/data/librispeech/privacy_eval/ls-test-clean_privacy-eval.txt
+    train_eval:
+      - spkanon_eval/data/librispeech/ls-train-clean-360.txt
+    targets:
+      - spkanon_eval/data/librispeech/ls-train-clean-100.txt
+    asv:
+      enrolls:
+        - spkanon_eval/data/librispeech/privacy_eval/ls-test-clean_trials.txt

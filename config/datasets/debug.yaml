@@ -1,11 +1,6 @@
+# minimal datasets for debugging
 data:
-  config: # details of the data (TODO: should this differ for each dataset?)
-    root_folder: /Users/cafr02/datasets
-    sample_rate: ${sample_rate} # depends on the anonymization model
-    batch_size: ${batch_size} # depends on the anonymization model
-    min_duration: 2
-    max_duration: 25
-
+  config_cfg: spkanon_eval/config/datasets/config.yaml
   datasets:
     eval:
       # - spkanon_eval/data/debug/edacc-test.txt
@@ -13,6 +8,9 @@ data:
       # - spkanon_eval/data/debug/cv-test.txt
       # - spkanon_eval/data/debug/ravdess.txt
     train_eval: # data to train the evaluation systems
-      - spkanon_eval/data/debug/ls-dev-clean-2.txt
+      - spkanon_eval/data/debug/ls-train-clean-5.txt
     targets:
       - spkanon_eval/data/debug/ls-dev-clean-2.txt
+    asv:
+      trials: spkanon_eval/data/debug/ls-dev-clean-2_trials.txt
+      enrolls: spkanon_eval/data/debug/ls-dev-clean-2_enrolls.txt

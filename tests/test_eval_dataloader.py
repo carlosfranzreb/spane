@@ -1,14 +1,12 @@
 import unittest
-import os
 import json
-import logging
-import shutil
 
 from omegaconf import OmegaConf
 import torchaudio
 import torch
 
-from spkanon_eval.datamodules.dataloader import eval_dataloader
+from spkanon_eval.datamodules import eval_dataloader
+from spkanon_eval.featex import Whisper
 
 
 class TestEvalDataloader(unittest.TestCase):
@@ -19,29 +17,32 @@ class TestEvalDataloader(unittest.TestCase):
         - Get the test datafiles.
         """
         self.datafile = "spkanon_eval/tests/datafiles/ls-dev-clean-2.txt"
-        self.sample_rate = 16000
-        self.batch_size = 2
-        self.config = OmegaConf.create(
-            {
-                "batch_size": self.batch_size,
-                "num_workers": 0,
-                "sample_rate": self.sample_rate,
-            }
-        )
         self.device = "cpu"
+        self.config = OmegaConf.load("spkanon_eval/config/datasets/config.yaml")[
+            "config"
+        ]
+        self.config.sample_rate = 16000
+        self.config.sample_rate_out = 16000
+        self.config.sample_rate_in = 24000
+
+        whisper_config = OmegaConf.load(
+            "spkanon_eval/config/components/asr/whisper_tiny.yaml"
+        )["whisper_tiny"]
+        self.model = Whisper(whisper_config, self.device)
 
     def test_eval_dataloader(self):
         """
         Test that the eval dataloader returns the correct number of batches and that
-        the content of the batches matches that of the test datafiles. We asume that
-        the dataset's spk2id mapping is correct.
+        the content of the batches matches that of the test datafiles. This test
+        also checks that the resampling works.
+
+        We asume that the dataset's spk2id mapping is correct.
         """
-        dl = eval_dataloader(self.config, self.datafile, self.device)
+        dl = eval_dataloader(self.config, self.datafile, self.model)
         samples = open(self.datafile).readlines()
 
-        for datafile, batch, data in dl:
+        for batch, data in dl:
             batch_size = batch[0].shape[0]
-            self.assertLessEqual(batch_size, self.batch_size)
             objs = list()
             for _ in range(batch_size):
                 objs.append(json.loads(samples.pop(0)))
@@ -51,9 +52,9 @@ class TestEvalDataloader(unittest.TestCase):
                 obj = objs[i]
                 audio_true, sr = torchaudio.load(obj["path"])
                 sample_data = data[i]
-                if sr != self.sample_rate:
+                if sr != self.config.sample_rate_in:
                     resampler = torchaudio.transforms.Resample(
-                        orig_freq=sr, new_freq=self.sample_rate
+                        orig_freq=sr, new_freq=self.config.sample_rate_in
                     )
                     audio_true = resampler(audio_true)
                 self.assertTrue(audio_true.shape[1] <= batch[0][i].shape[0])

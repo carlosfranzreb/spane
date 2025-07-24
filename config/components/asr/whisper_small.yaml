@@ -1,6 +1,5 @@
 whisper_small:
-  cls: spkanon_eval.featex.asr.whisper_wrapper.Whisper
+  cls: spkanon_eval.featex.Whisper
   train: false
   size: small # can be: tiny, base, small, medium, large
   output: text # can be text or encoding
-  batch_size: 8

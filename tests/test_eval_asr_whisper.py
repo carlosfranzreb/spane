@@ -5,7 +5,6 @@ and utterances. This test class inherits from BaseTestClass, which runs the infe
 for the debug data.
 """
 
-
 import os
 import shutil
 import unittest
@@ -13,7 +12,7 @@ import json
 
 from omegaconf import OmegaConf
 
-from spkanon_eval.featex.asr.whisper_wrapper import Whisper
+from spkanon_eval.featex import Whisper
 
 
 class TestEvalWhisper(unittest.TestCase):
@@ -28,21 +27,28 @@ class TestEvalWhisper(unittest.TestCase):
         os.makedirs(os.path.join(self.exp_folder))
         self.datafile = "spkanon_eval/tests/datafiles/ls-dev-clean-2.txt"
 
-        config = OmegaConf.create(
-            {
-                "train": False,
-                "size": "tiny",
-                "output": "text",
-                "batch_size": 4,
-                "data": {
-                    "config": {
-                        "sample_rate": 16000,
-                        "batch_size": 4,
-                        "num_workers": 0,
-                    },
-                },
-            }
-        )
+        # config = OmegaConf.create(
+        #     {
+        #         "train": False,
+        #         "size": "tiny",
+        #         "output": "text",
+        #         "batch_size": 4,
+        #         "data": {
+        #             "config": {
+        #                 "sample_rate_in": 16000,
+        #                 "num_workers": 0,
+        #                 "chunk_sizes": {"ls-dev-clean-2": {100: 1}},
+        #             },
+        #         },
+        #     }
+        # )
+        config = OmegaConf.load("spkanon_eval/config/components/asr/whisper_tiny.yaml")[
+            "whisper_tiny"
+        ]
+        config.data = OmegaConf.load("spkanon_eval/config/datasets/config.yaml")
+        config.data.config.sample_rate = 16000
+        config.data.config.sample_rate_out = 16000
+        config.data.config.sample_rate_in = 16000
         self.whisper = Whisper(config, "cpu")
         self.whisper.eval_dir(self.exp_folder, self.datafile)
         self.results_dir = os.path.join(self.exp_folder, "eval", "whisper-tiny")
@@ -102,7 +108,7 @@ class TestEvalWhisper(unittest.TestCase):
 
         # check the content of the `gender.txt` file
         with open(self.datafile) as f:
-            sample_genders = [json.loads(l)["gender"] for l in f]
+            sample_genders = [json.loads(line)["gender"] for line in f]
 
         with open(os.path.join(self.results_dir, "gender.txt")) as f:
             gender_results = [line.split() for line in f.readlines()]

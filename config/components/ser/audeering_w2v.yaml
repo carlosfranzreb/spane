@@ -1,6 +1,5 @@
 audeering_w2v:
-  cls: spkanon_eval.evaluation.ser.audeering_w2v.EmotionEvaluator
+  cls: spkanon_eval.evaluation.EmotionEvaluator
   init: audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim
   train: false
-  num_workers: ${trainer.num_workers}
-  batch_size: 2
+  root_folder: ${data.config.root_folder}

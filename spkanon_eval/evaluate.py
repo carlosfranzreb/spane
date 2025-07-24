@@ -2,7 +2,7 @@ import os
 import logging
 import copy
 
-from omegaconf import OmegaConf
+from omegaconf import DictConfig
 
 from spkanon_eval.setup_module import setup
 from spkanon_eval.utils import seed_everything
@@ -13,7 +13,7 @@ SAMPLE_RATE = 16000  # sample rate for evaluation
 LOGGER = logging.getLogger("progress")
 
 
-def evaluate(exp_folder: str, model: Anonymizer, config: OmegaConf) -> None:
+def evaluate(exp_folder: str, model: Anonymizer, config: DictConfig) -> None:
     """
     Evaluate the given experiment with the components defined in the config. Components
     may be trained before the evaluation.
@@ -21,7 +21,7 @@ def evaluate(exp_folder: str, model: Anonymizer, config: OmegaConf) -> None:
     Args:
         exp_folder: path to the experiment folder
         model: the anonymizer model
-        config: the config object, as defined in the documentation (TODO)
+        config: the config defining the evaluation components
     """
 
     # change the RNG seed if required
@@ -31,10 +31,6 @@ def evaluate(exp_folder: str, model: Anonymizer, config: OmegaConf) -> None:
     # ensure that the directory where the evaluation results will be stored exists
     os.makedirs(os.path.join(exp_folder, "eval"), exist_ok=True)
 
-    # change the config params to match the anonymized data
-    data_cfg = copy.deepcopy(config.data.config)
-    data_cfg.sample_rate = SAMPLE_RATE
-
     # use the anonymized datafiles if we are not evaluating the baseline
     is_baseline = config.eval.config.baseline
     fname = "eval" if is_baseline is True else "anon_eval"
@@ -42,7 +38,7 @@ def evaluate(exp_folder: str, model: Anonymizer, config: OmegaConf) -> None:
 
     # iterate over the components and train & evaluate them
     for name, cfg in config.eval.components.items():
-        cfg.data = {"config": copy.deepcopy(data_cfg)}
+        cfg.data = copy.deepcopy(config.data)
         component = setup(cfg, config.device, model=model)
 
         if cfg.train is True:

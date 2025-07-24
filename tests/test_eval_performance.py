@@ -5,21 +5,22 @@ and utterances. This test class inherits from BaseTestClass, which runs the infe
 for the debug data.
 """
 
-
 import os
 import unittest
 import shutil
+import sys
 
 from omegaconf import OmegaConf
 import torch
 
-from spkanon_eval.evaluation.performance.performance import PerformanceEvaluator
+from spkanon_eval.evaluation import PerformanceEvaluator
 
 
 class DummyModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.fc = torch.nn.Linear(1, 1)
+        self.device = "cpu"
 
     def forward(self, *args):
         input = torch.tensor([1.0])
@@ -33,19 +34,20 @@ class TestEvalPerformance(unittest.TestCase):
         the CPU results, not the GPU results.
         """
 
+        # create/empty experiment folder
         exp_folder = "spkanon_eval/tests/logs/performance"
         if os.path.isdir(exp_folder):
             shutil.rmtree(exp_folder)
         os.makedirs(os.path.join(exp_folder))
 
-        # run the experiment with both ASV evaluation scenarios
-        self.config = OmegaConf.create(
-            {
-                "repetitions": 2,
-                "sample_rate": 16000,
-                "durations": [2, 3],
-            },
-        )
+        self.config = OmegaConf.load(
+            "spkanon_eval/config/components/performance/performance_20s.yaml"
+        )["performance"]
+        self.config.data = OmegaConf.load("spkanon_eval/config/datasets/config.yaml")
+        self.config.data.config.sample_rate = 16000
+        self.config.data.config.sample_rate_out = 16000
+        self.config.data.config.sample_rate_in = 16000
+
         evaluator = PerformanceEvaluator(self.config, "cpu", DummyModel())
         evaluator.eval_dir(exp_folder)
         results_dir = os.path.join(exp_folder, "eval", "performance")
@@ -62,7 +64,13 @@ class TestEvalPerformance(unittest.TestCase):
             # for `cpu_specs.txt`, compare it with the CPU in this machine
             if fname == "cpu_specs.txt":
                 f_expected = os.path.join(results_dir, fname)
-                os.system(f"sysctl -a | grep machdep.cpu > {f_expected}")
+                operating_system = sys.platform
+                if operating_system == "darwin":
+                    os.system(f"sysctl -a | grep machdep.cpu > {f_expected}")
+                elif operating_system == "linux":
+                    os.system(f"lscpu > {f_expected}")
+                else:
+                    raise NotImplementedError("Unsupported operating system.")
                 with open(os.path.join(results_dir, fname)) as f:
                     expected = f.readlines()
                 with self.subTest(fname=fname):

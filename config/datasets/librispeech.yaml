@@ -1,13 +1,14 @@
 data:
-  config: # details of the data (TODO: should this differ for each dataset?)
-    root_folder: /ds/audio
-    sample_rate: ${sample_rate} # depends on the anonymization model
-    batch_size: ${batch_size} # depends on the anonymization model
-
+  config_cfg: spkanon_eval/config/datasets/config.yaml
   datasets:
     eval:
-      - spkanon_eval/data/librispeech/ls-test-clean.txt
+      - spkanon_eval/data/librispeech/ls-test-clean_max30s.txt
     train_eval:
       - spkanon_eval/data/librispeech/ls-train-clean-360.txt
     targets:
-      - spkanon_eval/data/librispeech/ls-train-clean-5.txt
+      - spkanon_eval/data/librispeech/ls-train-clean-100.txt
+    asv:
+      trials:
+        - spkanon_eval/data/librispeech/privacy_eval/ls-test-clean_trials.txt
+      enrolls:
+        - spkanon_eval/data/librispeech/privacy_eval/ls-test-clean_trials.txt

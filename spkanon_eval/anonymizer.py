@@ -23,7 +23,7 @@ class Anonymizer:
             if cfg is not None:
                 setattr(self, module, setup(cfg, self.device))
             else:
-                setattr(self, module, None)
+                setattr(self, str(module), None)
 
         # if possible, get the output of the featproc module
         if self.featproc is not None:
@@ -31,36 +31,37 @@ class Anonymizer:
 
         # if there is a target selection algorithm, pass it to the right component
         target_selection_cfg = config.get("target_selection", None)
-        if target_selection_cfg is not None and self.featproc is not None:
+        if target_selection_cfg is not None:
+
             args = [target_selection_cfg]
             if hasattr(target_selection_cfg, "extra_args"):
                 for arg in target_selection_cfg.extra_args:
                     args.append(getattr(self, arg))
-            for name, component in self.featproc.items():
-                if hasattr(component, "target_selection"):
-                    LOGGER.info(f"Passing target selection algorithm to {name}")
-                    component.init_target_selection(*args)
 
-    def get_feats(self, batch: list, source: Tensor, target: Tensor = None):
+            for module in [self.featproc, self.synthesis]:
+                if module is None:
+                    continue
+                if not isinstance(module, dict):
+                    module = {"synthesis": module}
+                for name, component in module.items():
+                    if hasattr(component, "target_selection"):
+                        LOGGER.info(f"Passing target selection algorithm to {name}")
+                        component.init_target_selection(*args)
+                        return
+
+    def get_feats(self, batch: list, source_is_male: Tensor) -> dict:
         """
-        Run the featex, featproc and featfusion modules. Returns spectrograms and
+        Run the featex, featproc and featfusion modules. Returns anonymized features and
         targets. Sources refer to the input speaker, and targets to the output speaker.
-        They are both added to the batch after the feature extraction phase with the
-        keys `source` and `target`. If the `target` argument is not None, it is created
-        with -1 values, which indicate that no target has been defined for the
-        corresponding sample.
         """
         out = batch
         if self.featex is not None:
             out = self._run_module(self.featex, batch)
+        else:
+            out = {"audio": batch[0], "n_samples": batch[2]}
 
-        # add targets and sources to the batch
-        if target is None:
-            target = torch.ones(batch[0].shape[0], dtype=torch.int64) * -1
-            target = target.to(batch[0].device)
-        out["target"] = target
-        out["source"] = source
-
+        out["source"] = batch[1]
+        out["source_is_male"] = source_is_male
         if self.featproc is not None:
             processed = self._run_module(self.featproc, out)
             out_proc = dict()
@@ -75,13 +76,24 @@ class Anonymizer:
 
     def forward(self, batch: list, data: list) -> tuple[Tensor, Tensor, Tensor]:
         """Returns anonymized speech, item lengths and targets."""
-        source = torch.tensor(
-            [d["speaker_id"] for d in data], dtype=torch.long, device=self.device
-        )
+        if "gender" in data[0]:
+            source_is_male = torch.tensor(
+                [d["gender"] == "M" for d in data], dtype=torch.bool, device=self.device
+            )
+        else:
+            source_is_male = torch.zeros_like(batch[1], dtype=torch.bool)
+
         with torch.no_grad():
-            out = self.get_feats(batch, source)
-            waves, n_samples = self.synthesis.run(out)
-        return waves, n_samples, out["target"]
+            out = self.get_feats(batch, source_is_male)
+            synthesis_out = self.synthesis.run(out)
+
+        if len(synthesis_out) == 3:
+            audios, audio_lens, target = synthesis_out
+        else:
+            audios, audio_lens = synthesis_out
+            target = out["target"]
+
+        return audios, audio_lens, target
 
     def _run_module(self, module: dict, batch: list) -> dict:
         """
@@ -98,6 +110,19 @@ class Anonymizer:
             else:
                 out[name] = component_out
         return out
+
+    def get_consistent_targets(self) -> bool:
+        """
+        Get whether the selected targets should be consistent. We assume that targets
+        are selected in the `featproc` module, and iterate over its components looking
+        for the equivalent method.
+        """
+        if self.featproc is None:
+            LOGGER.warning("No featproc module found, so no targets to be consistent")
+            return
+        for name, component in self.featproc.items():
+            if hasattr(component, "target_selection"):
+                return component.target_selection.get_consistent_targets()
 
     def set_consistent_targets(self, consistent_targets: bool) -> None:
         """
@@ -124,3 +149,17 @@ class Anonymizer:
                     component.to(device)
         self.synthesis.to(device)
         self.device = device
+
+    def reset(self) -> None:
+        """
+        Propagate reset() to all the components that have it. This is used to recover
+        from an OOM error, as some components may keep some CUDA memory allocated,
+        hindering a complete recovery.
+        """
+        for module in [self.featex, self.featproc, self.featfusion]:
+            if module is None:
+                continue
+
+            for component in module.values():
+                if hasattr(component, "reset"):
+                    component.reset()

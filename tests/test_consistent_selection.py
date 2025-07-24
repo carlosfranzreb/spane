@@ -7,40 +7,23 @@ import unittest
 import torch
 from omegaconf import OmegaConf
 
-from spkanon_eval.target_selection.random import RandomSelector
+from spkanon_eval.target_selection import RandomSelector
 
 
 class TestConsistentSelection(unittest.TestCase):
     def test_consistent_selection(self):
-        # ensure that given targets are propagated to all utts of the same speaker
-        cfg = OmegaConf.create({"consistent_targets": True})
-        selector = RandomSelector(torch.randn(20, 16), cfg)
-        source = torch.tensor([0, 0, 1, 1, 1, 2])
-        target_in = torch.tensor([-1, -1, 0, -1, -1, 2])
-        spec = torch.randn(6, 80, 100)
-        target_1 = selector.select(spec, source, target_in)
-        self.assertTrue(target_1[0] == target_1[1])
-        self.assertTrue(torch.all(target_1[2:5] == 0))
-        self.assertTrue(target_1[5] == 2)
+        # ensure that targets remain or change between calls, depending on the config
+        for consistent_targets in [True, False]:
+            cfg = OmegaConf.create({"consistent_targets": consistent_targets})
+            selector = RandomSelector(torch.randn(1000, 16), cfg)
+            source = torch.tensor([0, 0, 1, 1, 1, 2], dtype=torch.int64)
+            source_is_male = torch.tensor([1, 1, 0, 0, 0, 1], dtype=torch.bool)
+            spec = torch.randn(6, 80, 100)
+            target_1 = selector.select(spec, source, source_is_male)
+            target_2 = selector.select(spec, source, source_is_male)
 
-        # ensure that targets defined in previous calls are used again
-        source = torch.tensor([0, 1, 2, 3])
-        spec = torch.randn(4, 80, 100)
-        target_2 = selector.select(spec, source)
-        self.assertTrue(target_2[:3].tolist() == [target_1[0].item(), 0, 2])
-
-    def test_inconsistent_selection(self):
-        # ensure that targets change between calls
-        cfg = OmegaConf.create({"consistent_targets": False})
-        selector = RandomSelector(torch.randn(1000, 16), cfg)
-        source = torch.Tensor([0, 0, 1, 1, 1, 2])
-        spec = torch.randn(6, 80, 100)
-        target_1 = selector.select(spec, source)
-        target_2 = selector.select(spec, source)
-        self.assertFalse(torch.all(target_1 == target_2))
-
-        # ensure that given targets are kept
-        target_in = torch.tensor([-1, -1, 0, -1, -1, 2])
-        target_3 = selector.select(spec, source, target_in)
-        self.assertTrue(target_3[2] == 0)
-        self.assertTrue(target_3[5] == 2)
+            all_same = torch.all(target_1 == target_2)
+            if consistent_targets:
+                self.assertTrue(all_same)
+            else:
+                self.assertFalse(all_same)

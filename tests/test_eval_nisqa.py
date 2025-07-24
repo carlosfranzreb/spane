@@ -5,7 +5,6 @@ and utterances. This test class inherits from BaseTestClass, which runs the infe
 for the debug data.
 """
 
-
 import json
 import os
 import shutil
@@ -13,30 +12,24 @@ import unittest
 
 from omegaconf import OmegaConf
 
-from spkanon_eval.evaluation.naturalness.naturalness_nisqa import NisqaEvaluator
-
-
-NISQA_CFG = OmegaConf.create(
-    {
-        "cls": "spkanon_eval.evaluation.naturalness.naturalness_nisqa.NisqaEvaluator",
-        "init": "spkanon_eval/NISQA/weights/nisqa_tts.tar",
-        "train": False,
-        "num_workers": 0,
-        "batch_size": 10,
-    }
-)
+from spkanon_eval.evaluation import NisqaEvaluator
 
 
 class TestEvalNisqa(unittest.TestCase):
     def setUp(self) -> None:
         """Run NISQA with the LibriSpeech dev-clean data."""
+
         self.exp_folder = "spkanon_eval/tests/logs/naturalness_nisqa"
         if os.path.isdir(self.exp_folder):
             shutil.rmtree(self.exp_folder)
         os.makedirs(os.path.join(self.exp_folder))
         self.datafile = "spkanon_eval/tests/datafiles/ls-dev-clean-2.txt"
 
-        self.nisqa = NisqaEvaluator(NISQA_CFG, "cpu")
+        nisqa_config = OmegaConf.load(
+            "spkanon_eval/config/components/naturalness/nisqa.yaml"
+        )["naturalness_nisqa"]
+        nisqa_config.num_workers = 0
+        self.nisqa = NisqaEvaluator(nisqa_config, "cpu")
         self.nisqa.eval_dir(self.exp_folder, self.datafile)
         self.results_dir = os.path.join(self.exp_folder, "eval", "nisqa")
 

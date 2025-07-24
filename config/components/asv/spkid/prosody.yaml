@@ -1,0 +1,14 @@
+spkid:
+  cls: spkanon_eval.featex.ProsodyEmbedding
+  pitch_floor: 75
+  pitch_floor_for_segmentation: 75
+  pitch_ceiling: 700
+  sampling_frequency: 16000
+  time_step: 0.01
+  batch_size: 32
+  segmentation_method: "pitch"
+  feature_segments:
+    f0: ""
+    energy: ""
+  num_workers: ${data.config.num_workers}
+  train: false

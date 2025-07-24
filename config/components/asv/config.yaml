@@ -1,0 +1,15 @@
+# this config must be a child of the `eval.components` config
+asv:
+  cls: spkanon_eval.evaluation.ASV
+  scenario: semi-informed # attack scenario; can be ignorant or semi-informed
+  train: true # set this to false if you are using checkpoints
+  spkid_cfg: spkanon_eval/config/components/asv/spkid/ecapa.yaml
+  spkid_ckpt: null
+  train_spkid: true
+  train_mean_spkemb: null
+  backend: cos # plda or cos
+  reduce_dims: null # if set, PCA is used to reduce the spkembs before the backend
+  plda_ckpt: null # if null, PLDA will be trained
+  save_spkembs: false
+  consistent_targets: ${inference.consistent_targets} # required to anonymize training data
+  sample_rate_out: ${sample_rate_out}

@@ -2,7 +2,6 @@
 Returns the same spectrograms it receives. Used for testing purposes.
 """
 
-
 import importlib
 import torch
 from omegaconf import DictConfig
@@ -31,9 +30,11 @@ class DummyConverter(InferComponent):
         spec = batch[self.input_spec]
         n_frames = batch[self.input_len]
         source = batch[self.input_source]
-        target_in = batch[self.input_target] if self.input_target in batch else None
+        source_is_male = torch.randint(
+            2, (source.shape[0],), device=self.device, dtype=torch.bool
+        )
         mock_input = torch.zeros(spec.shape[0], dtype=torch.int64, device=self.device)
-        target = self.target_selection.select(mock_input, source, target_in)
+        target = self.target_selection.select(mock_input, source, source_is_male)
         return {"spectrogram": spec, "n_frames": n_frames, "target": target}
 
     def to(self, device: str) -> None:

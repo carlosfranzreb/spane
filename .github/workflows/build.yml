@@ -1,29 +1,57 @@
-name: Build
+name: Build and test
 
 on:
   push:
     branches:
       - master
+      - better_batches
   pull_request:
     branches:
       - master
 
 jobs:
-  build-macos:
-    runs-on: macos-latest
-    strategy:
-      max-parallel: 5
+  build:
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v3
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build and test
+        run: |
+          cd ..
+          bash ./spkanon_eval/build/framework.sh
+
+      - name: Create .coveragerc
+        run: |
+          cat <<EOF > ../.coveragerc
+          [report]
+          include = spkanon_eval/*
+          EOF
+
+      - name: Coverage badge
+        uses: tj-actions/coverage-badge-py@v2
         with:
-          python-version: "3.9"
-      - name: Add conda to system path
+          working-directory: ..
+          output: ./spkanon_eval/coverage.svg
+
+      - name: Verify Changed files
+        uses: tj-actions/verify-changed-files@v16
+        id: verify-changed-files
+        with:
+          files: coverage.svg
+
+      - name: Commit badge
+        if: steps.verify-changed-files.outputs.files_changed == 'true'
         run: |
-          # $CONDA is an environment variable pointing to the root of the miniconda directory
-          echo $CONDA/bin >> $GITHUB_PATH
-      - name: Build & test project
-        run: |
-          bash ./build/framework.sh
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add coverage.svg
+          git commit -m "Update coverage.svg"
+
+      - name: Push changes
+        if: steps.verify-changed-files.outputs.files_changed == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}

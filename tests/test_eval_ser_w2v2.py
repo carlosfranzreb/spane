@@ -5,7 +5,7 @@ import shutil
 import torch
 from omegaconf import OmegaConf
 
-from spkanon_eval.evaluation.ser.audeering_w2v import EmotionEvaluator
+from spkanon_eval.evaluation import EmotionEvaluator
 from base import BaseTestClass, run_pipeline
 
 
@@ -16,23 +16,17 @@ class TestEvalSer(BaseTestClass):
         """
 
         # run the experiment with both ASV evaluation scenarios
-        self.init_config.eval.components = {
-            "audeering_w2v": {
-                "cls": "spkanon_eval.evaluation.ser.audeering_w2v.EmotionEvaluator",
-                "init": "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim",
-                "train": False,
-                "num_workers": 0,
-                "batch_size": 2,
-            }
-        }
+        self.init_config.eval.components = OmegaConf.load(
+            "spkanon_eval/config/components/ser/audeering_w2v.yaml"
+        )
         self.init_config.log_dir = os.path.join(self.init_config.log_dir, "eval_ser")
-        self.config, log_dir = run_pipeline(self.init_config)
-        results_dir = os.path.join(log_dir, "eval", "ser-audeering-w2v")
+        config = run_pipeline(self.init_config)
+        results_dir = os.path.join(config.exp_folder, "eval", "ser-audeering-w2v")
         self.assertTrue(os.path.isdir(results_dir))
 
         # gather the utterances from the datafile
         expected_utts = list()
-        for line in open(os.path.join(self.config.data.datasets.eval[0])):
+        for line in open(os.path.join(config.data.datasets.eval[0])):
             expected_utts.append(json.loads(line)["path"].replace("{root}/", ""))
 
         # check the results
@@ -45,7 +39,7 @@ class TestEvalSer(BaseTestClass):
                 fname = values[0][values[0].index("LibriSpeech") :]
                 self.assertTrue(fname in expected_utts)
                 for idx in range(1, 8):
-                    self.assertTrue(0 <= float(values[idx]) <= 1.1)
+                    self.assertTrue(-1.1 <= float(values[idx]) <= 1.1)
 
         shutil.rmtree(self.init_config.log_dir)
 

@@ -5,7 +5,6 @@ and utterances. This test class inherits from BaseTestClass, which runs the infe
 for the debug data.
 """
 
-
 import pickle
 import os
 import copy
@@ -17,64 +16,34 @@ from omegaconf import OmegaConf
 import numpy as np
 import plda
 
-from base import BaseTestClass, run_pipeline
 from spkanon_eval.setup_module import setup
-from spkanon_eval.datamodules.dataloader import setup_dataloader
-from spkanon_eval.evaluation.asv.spkid_plda import SAMPLE_RATE as EVAL_SR
+from spkanon_eval.datamodules import setup_dataloader
+from spkanon_eval.evaluate import SAMPLE_RATE as EVAL_SR
 from spkanon_eval.utils import seed_everything
 
-
-SPKEMB_SIZE = 192
-SPKID_CONFIG = {
-    "cls": "spkanon_eval.featex.spkid.spkid.SpkId",
-    "path": "speechbrain/spkrec-ecapa-voxceleb",
-    "train": False,
-    "batch_size": 2,
-    "num_workers": 0,
-    "emb_model_ckpt": None,
-}
-ASV_IGNORANT_CONFIG = OmegaConf.create(
-    {
-        "asv_ignorant": {
-            "cls": "spkanon_eval.evaluation.asv.spkid_plda.ASV",
-            "scenario": "ignorant",
-            "train": True,
-            "lda_ckpt": None,
-            "plda_ckpt": None,
-            "spkid": SPKID_CONFIG,
-        }
-    }
-)
-ASV_LAZY_CONFIG = OmegaConf.create(
-    {
-        "asv_lazy_informed": {
-            "cls": "spkanon_eval.evaluation.asv.spkid_plda.ASV",
-            "scenario": "lazy-informed",
-            "train": True,
-            "inference": "${inference}",
-            "sample_rate": "${synthesis.sample_rate}",
-            "lda_ckpt": None,
-            "plda_ckpt": None,
-            "spkid": SPKID_CONFIG,
-        }
-    }
-)
-FEATPROC_CONFIG = {
-    "dummy": {
-        "cls": "spkanon_eval.featproc.dummy.DummyConverter",
-        "input": {
-            "spectrogram": "spectrogram",
-            "n_frames": "n_frames",
-            "source": "source",
-            "target": "target",
-        },
-        "n_targets": 20,
-    },
-    "output": {"featproc": ["spectrogram", "n_frames", "target"], "featex": []},
-}
+from base import BaseTestClass, run_pipeline
 
 
 class TestEvalASV(BaseTestClass):
+    def setUp(self):
+        super().setUp()
+        self.informed_config = OmegaConf.load(
+            "spkanon_eval/config/components/asv/config.yaml"
+        )
+        self.informed_config.asv.backend = "plda"
+        self.informed_config.asv.train_spkid = False
+        # self.informed_config.asv.spkid = OmegaConf.load(
+        #     "spkanon_eval/config/components/asv/spkid/xvector.yaml"
+        # )["spkid"]
+        # del self.informed_config.asv.spkid_cfg
+
+        self.ignorant_config = self.informed_config.copy()
+        self.ignorant_config.asv.scenario = "ignorant"
+        self.spkemb_size = 192
+
+    def tearDown(self):
+        rmtree(self.init_config.log_dir)
+
     def test_results(self):
         """
         Test whether the ignorant ASV component, when given the ls-dev-clean-2 debug
@@ -83,13 +52,13 @@ class TestEvalASV(BaseTestClass):
         """
 
         # run the experiment with both ASV evaluation scenarios
-        self.init_config.eval.components = ASV_IGNORANT_CONFIG
+        self.init_config.eval.components = self.ignorant_config
         self.init_config.log_dir = os.path.join(self.init_config.log_dir, "asv_test")
-        config, log_dir = run_pipeline(self.init_config)
+        config = run_pipeline(self.init_config)
 
         # assert that 3 files were created
         results_subdir = "eval/asv-plda/ignorant/results"
-        results_dir = os.path.join(log_dir, results_subdir)
+        results_dir = os.path.join(config.exp_folder, results_subdir)
         results_files = [f for f in os.listdir(results_dir) if f.endswith(".txt")]
         self.assertEqual(len(results_files), 3)
 
@@ -99,95 +68,71 @@ class TestEvalASV(BaseTestClass):
             self.assertEqual(len(lines), 2)
             out = lines[1].strip().split()
             self.assertEqual(out[0], "anon_eval")
-            self.assertEqual(int(out[1]), 9)
+            self.assertEqual(int(out[1]), 12)
             self.assertTrue(isinstance(float(out[2]), float))
             self.assertTrue(0 <= float(out[3]) <= 1)
 
-        rmtree(self.init_config.log_dir)
-
-    def test_lda_reduction(self):
+    def test_pca_reduction(self):
         """
-        Ensure that, when defined in the config, an LDA algorithm is trained and saved
-        to disk, and that it is used to reduce the dimensionality of the speaker
-        embeddings to the right dimension.
+        Ensure that, when defined in the config, the PCA algorithm embedded in the PLDA
+        package is trained and saved to disk, and that it is used to reduce the
+        dimensionality of the speaker embeddings to the right dimension.
+
+        ! n_components cannot be larger than min(n_features, n_classes - 1)
         """
 
-        lda_output_size = 2
-        self.init_config.eval.components = ASV_IGNORANT_CONFIG
-        self.init_config.eval.components.asv_ignorant.reduced_dims = lda_output_size
+        pca_output_size = 2
+        self.init_config.eval.components = self.ignorant_config.copy()
+        self.init_config.eval.components.asv.reduce_dims = pca_output_size
         self.init_config.log_dir = os.path.join(
-            self.init_config.log_dir, "asv_test_lda_reduction"
+            self.init_config.log_dir, "asv_test_pca_reduction"
         )
-        config, log_dir = run_pipeline(self.init_config)
+        config = run_pipeline(self.init_config)
 
         asv_subdir = "eval/asv-plda/ignorant"
-        asv_dir = os.path.join(log_dir, asv_subdir)
+        asv_dir = os.path.join(config.exp_folder, asv_subdir)
 
-        # assert that the LDA algorithm was trained and saved to disk
-        lda_path = os.path.join(asv_dir, "train", "models", "lda.pkl")
-        self.assertTrue(
-            os.path.exists(os.path.join(asv_dir, "train", "models", "lda.pkl"))
-        )
-
-        # assert that the input and output sizes of the LDA model are correct
-        lda = pickle.load(open(lda_path, "rb"))
-        x = np.random.randn(2, SPKEMB_SIZE)
-        try:
-            lda_out = lda.transform(x)
-        except ValueError:
-            self.fail("The input size of the LDA model is incorrect")
-
-        self.assertEqual(
-            lda_out.shape[1],
-            lda_output_size,
-            "The output size of the LDA model is incorrect",
-        )
-
-        # assert that the PLDA model does not use PCA internally and that it expects
-        # the LDA input size
-        plda_path = os.path.join(asv_dir, "train", "models", "plda.pkl")
+        # assert that the input and output sizes of the PCA model are correct
+        plda_path = os.path.join(asv_dir, "train", "plda.pkl")
         plda = pickle.load(open(plda_path, "rb"))
-        self.assertEqual(plda.model.pca, None, "The PLDA model uses PCA internally")
-        self.assertEqual(
-            plda.model.get_dimensionality("U"),
-            lda_output_size,
-            "The PLDA model expects a different input size",
-        )
 
-        rmtree(self.init_config.log_dir)
+        x = np.random.randn(2, self.spkemb_size)
+        pca_out = plda.model.pca.transform(x)
+        self.assertTrue(pca_out.shape == (2, 2), "PCA output shape is incorrect")
 
     def test_enrollment_targets(self):
         """
         Ensure that, when the inference and evaluation seeds are different, the targets
         chosen for inference and enrollment utterances of each source speaker also
-        differ. We test this only with the Common Voice source speakers.
+        differ.
 
         This is important to ensure that enrollment speakers are not anonymized with
         the same targets that were already used during inference, which would make the
-        ASV evaluation trivial, as the ASV system would detect target instead of source
-        speakers.
+        ASV evaluation trivial, as the ASV system would detect targets instead of
+        sources.
+
+        This is only necessary when `consistent_targets` is true, i.e. speaker-level
+        target selection. When `consistent_targets` is false, we don't need to
+        anonymize the enrollment speakers again.
         """
 
         # add the dummy featproc component to the config and random target selection
-        self.init_config.target_selection = {
-            "cls": "spkanon_eval.target_selection.random.RandomSelector",
-            "consistent_targets": True,
-        }
-        self.init_config.featproc = FEATPROC_CONFIG
+        self.init_config.featproc.dummy.n_targets = 20
         self.init_config.eval.config.seed = self.init_config.seed + 100
-        self.init_config.eval.components = ASV_LAZY_CONFIG
+        self.init_config.eval.components = self.informed_config
+        self.init_config.eval.components.asv.consistent_targets = True
         self.init_config.log_dir = os.path.join(
             self.init_config.log_dir, "asv_test_enrollment_targets"
         )
 
         # run the experiment and get the log file with the selected targets
-        config, log_dir = run_pipeline(self.init_config)
+        config = run_pipeline(self.init_config)
 
         # gather the source-target pairs, separating them by run (inference, enroll)
         targets = list()
         for f in ["anon_eval.txt", "anon_eval_enrolls.txt"]:
             targets.append(list())
-            for line in open(os.path.join(log_dir, "data", f)):
+            for line in open(os.path.join(config.exp_folder, "data", f)):
                 obj = json.loads(line)
                 targets[-1].append((obj["speaker_id"], obj["target"]))
 
@@ -208,11 +153,9 @@ class TestEvalASV(BaseTestClass):
             found_difference, "All inference and enrollment targets are the same"
         )
 
-        rmtree(self.init_config.log_dir)
-
-    def test_lazy_informed_asv(self):
+    def test_informed_asv(self):
         """
-        In the lazy-informed scenario, the ASV system is trained with anonymized
+        In the semi-informed scenario, the ASV system is trained with anonymized
         enrollment utterances. Assert that they are anonymized by ensuring that:
         1. the anonymized utterances differ from the original ones,
         2. that the ASV sytem was trained with the anonymized utterances
@@ -225,14 +168,13 @@ class TestEvalASV(BaseTestClass):
             "cls": "spkanon_eval.target_selection.random.RandomSelector",
             "consistent_targets": True,
         }
-        self.init_config.featproc = FEATPROC_CONFIG
         self.init_config.eval.config.seed = self.init_config.seed + 1
-        self.init_config.eval.components = ASV_LAZY_CONFIG
+        self.init_config.eval.components = self.informed_config
         self.init_config.log_dir = os.path.join(
-            self.init_config.log_dir, "asv_test_lazy_informed"
+            self.init_config.log_dir, "asv_test_informed"
         )
-        config, log_dir = run_pipeline(self.init_config)
-        asv_dir = os.path.join(log_dir, "eval", "asv-plda", "lazy-informed")
+        config = run_pipeline(self.init_config)
+        asv_dir = os.path.join(config.exp_folder, "eval", "asv-plda", "semi-informed")
 
         # find the train_eval datafile and assert that it is LibriSpeech's dev-clean-2
         train_files = config.data.datasets.train_eval
@@ -245,7 +187,7 @@ class TestEvalASV(BaseTestClass):
             "Wrong train_eval dataset",
         )
 
-        anon_train_file = os.path.join(log_dir, "data", "anon_train_eval.txt")
+        anon_train_file = os.path.join(config.exp_folder, "data", "anon_train_eval.txt")
         self.assertTrue(
             os.path.exists(anon_train_file),
             "The anonymized train_eval file does not exist",
@@ -274,14 +216,13 @@ class TestEvalASV(BaseTestClass):
 
         # compute the spkid vecs for the anonymized utterances
         # as is done in spkanon_eval.evaluation.asv.spkid_plda.compute_spkid_vecs
-        spkid_model = setup(config.eval.components.asv_lazy_informed.spkid, "cpu")
+        spkid_model = setup(config.eval.components.asv.spkid, "cpu")
         labels = np.array([], dtype=int)  # utterance labels
         vecs = None  # spkid vecs of utterances
 
         spkid_config = copy.deepcopy(config.data.config)
-        spkid_config.batch_size = SPKID_CONFIG["batch_size"]
         spkid_config.sample_rate = EVAL_SR
-        dl = setup_dataloader(spkid_config, anon_train_file)
+        dl = setup_dataloader(spkid_model, spkid_config, anon_train_file)
         for batch in dl:
             new_vecs = spkid_model.run(batch).detach().cpu().numpy()
             vecs = new_vecs if vecs is None else np.vstack([vecs, new_vecs])
@@ -297,9 +238,7 @@ class TestEvalASV(BaseTestClass):
         # the ASV system
         new_plda = plda.Classifier()
         new_plda.fit_model(vecs, labels)
-        old_plda = pickle.load(
-            open(os.path.join(asv_dir, "train", "models", "plda.pkl"), "rb")
-        )
+        old_plda = pickle.load(open(os.path.join(asv_dir, "train", "plda.pkl"), "rb"))
 
         for attr in ["m", "A", "Psi", "relevant_U_dims", "inv_A"]:
             self.assertTrue(
@@ -309,5 +248,3 @@ class TestEvalASV(BaseTestClass):
                 ),
                 f"The attribute {attr} of the PLDA models differ",
             )
-
-        rmtree(self.init_config.log_dir)

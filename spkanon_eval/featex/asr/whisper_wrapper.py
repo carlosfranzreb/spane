@@ -3,37 +3,35 @@ import string
 import logging
 
 import whisper
-from whisper.normalizers import EnglishTextNormalizer
 import torch
 import editdistance
 import numpy as np
+from tqdm import tqdm
 
 from spkanon_eval.datamodules.dataloader import eval_dataloader
 from spkanon_eval.evaluation.analysis import analyse_results
 from spkanon_eval.featex.asr.whisper_analysis_utils import analyse_func, headers_func
 from spkanon_eval.component_definitions import InferComponent, EvalComponent
 
-
-SAMPLE_RATE = 16000  # Whisper expects 16kHz audio
 LOGGER = logging.getLogger("progress")
 
 
 class Whisper(InferComponent, EvalComponent):
     def __init__(self, config, device, **kwargs):
+        self.device = device
+        self.config = config
         self.model = whisper.load_model(
             config.size,
             download_root="checkpoints/whisper",
         ).to(device)
-        self.model_size = config.size
-        self.device = device
-        self.out = config.output
-        self.config = config
+        self.model.eval()
+        self.max_chars_div = self.config.get("max_chars_div", None)
+        self.options = whisper.DecodingOptions(
+            fp16=self.device == "cuda", language="en"
+        )
 
-        # update batch size; data is only needed by `eval_dir`
-        if "data" in self.config:
-            self.config.data.config.batch_size = config.batch_size
-
-    def run(self, batch):
+    @torch.inference_mode()
+    def run(self, batch: list) -> list:
         """
         1. pad each audio to span 30 seconds: whisper expects log-mel spectrograms
             that span 30 seconds as input
@@ -43,14 +41,21 @@ class Whisper(InferComponent, EvalComponent):
         mels = list()
         for i in range(batch[0].shape[0]):  # iterate over waveforms in batch
             padded = whisper.pad_or_trim(batch[0][i])
-            mels.append(whisper.log_mel_spectrogram(padded).unsqueeze(0))
-        mels = torch.cat(mels, dim=0)
-        if self.out == "text":  # return predicted text
-            out = self.model.decode(
-                mels, options=whisper.DecodingOptions(fp16=False, language="en")
+            mels.append(
+                whisper.log_mel_spectrogram(padded, self.model.dims.n_mels).unsqueeze(0)
             )
-            return [decoding.text for decoding in out]
-        elif self.out == "encoding":  # return encoder output
+        mels = torch.cat(mels, dim=0)
+
+        if self.config.output == "text":
+            out = self.model.decode(mels, options=self.options)
+            if self.max_chars_div is not None:
+                max_chars = int(batch[0].shape[1] / self.max_chars_div)
+            else:
+                max_chars = batch[0].shape[1]
+            texts = [decoding.text[:max_chars] for decoding in out]
+            return texts
+
+        elif self.config.output == "encoding":
             return self.model.encoder(mels)
 
     def train(self, exp_folder: str) -> None:
@@ -68,10 +73,9 @@ class Whisper(InferComponent, EvalComponent):
             datafile: datafile to evaluate
         """
         LOGGER.info("Computing WER of eval data with dataloader")
-        if self.out != "text":
-            self.out = "text"
-        normalizer = EnglishTextNormalizer()
-        dump_folder = os.path.join(exp_folder, "eval", f"whisper-{self.model_size}")
+        if self.config.output != "text":
+            self.config.output = "text"
+        dump_folder = os.path.join(exp_folder, "eval", f"whisper-{self.config.size}")
         os.makedirs(dump_folder, exist_ok=True)
         stats = {"n_edits": list(), "n_words_ref": list()}
 
@@ -80,18 +84,20 @@ class Whisper(InferComponent, EvalComponent):
         with open(dump_file, "w", encoding="utf-8") as f:
             f.write("path n_edits n_words_ref wer text\n")
 
-        for _, batch, sample_data in eval_dataloader(
-            self.config.data.config, datafile, self.device
+        for batch, sample_data in tqdm(
+            eval_dataloader(self.config.data.config, datafile, self)
         ):
             texts_pred = self.run(batch)  # compute the transcriptions for the batch
             for i, text_pred in enumerate(texts_pred):  # iterate through the batch
                 # compute the WER for the current sample
                 audiofile = sample_data[i]["path"]
                 text_ref = sample_data[i]["text"]
-                n_edits, n_words, wer = compute_edits(normalizer(text_pred), text_ref)
+                n_edits, n_words, wer = compute_edits(text_pred, text_ref)
                 # if wer could not be computed, skip
                 if n_words == 0:
-                    LOGGER.warn(f"Reference text of {audiofile} has no words; WER = 0")
+                    LOGGER.warning(
+                        f"Reference text of {audiofile} has no words; WER = 0"
+                    )
                 # dump the results for this sample into the datafile
                 with open(dump_file, "a", encoding="utf-8") as f:
                     f.write(f"{audiofile} {n_edits} {n_words} {wer} {text_pred}\n")
@@ -108,9 +114,7 @@ class Whisper(InferComponent, EvalComponent):
         )
 
     def to(self, device):
-        """
-        Implementation of PyTorch's `to()` method to set the device.
-        """
+        """Implementation of PyTorch's `to()` method to set the device."""
         self.model.to(device)
         self.device = device
 
@@ -120,14 +124,17 @@ def compute_edits(text_pred, text_ref):
     Normalize the texts, split them into words and compute the Levenhstein
     distance between the lists of words. Return the edit distance, the number of words
     of `text_ref` (which we assume is the reference) and the WER.
-    If the reference text has no words, return all zeros so that the analysis may
-    be run.
+    The max. WER is 1. If the reference text has no words, return all zeros so that the
+    analysis may be run.
     """
     text_pred = normalize_text(text_pred)
     text_ref = normalize_text(text_ref)
     n_edits = editdistance.eval(text_pred, text_ref)
     if len(text_ref) > 0:
-        return n_edits, len(text_ref), round(n_edits / len(text_ref), 2)
+        n_words_ref = len(text_ref)
+        if n_edits > n_words_ref:
+            n_edits = n_words_ref
+        return n_edits, n_words_ref, round(n_edits / n_words_ref, 2)
     else:
         return 0, 0, 0
 

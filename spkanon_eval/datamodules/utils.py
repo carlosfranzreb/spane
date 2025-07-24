@@ -8,7 +8,7 @@ from omegaconf import OmegaConf
 LOGGER = logging.getLogger("progress")
 
 
-def prepare_datafile(stage: str, config: OmegaConf, log_dir: str) -> None:
+def prepare_datafile(stage: str, config: OmegaConf, log_dir: str) -> str:
     """
     Add the root folder to the paths of the audiofiles and store the resulting
     datafiles within the experiment folder, merged into a single datafile named after
@@ -24,6 +24,9 @@ def prepare_datafile(stage: str, config: OmegaConf, log_dir: str) -> None:
 
     Raises:
         FileExistsError: if the new datafile already exists.
+
+    Returns:
+        The path to the new datafile.
     """
 
     LOGGER.info(f"Preparing datafile for stage {stage}")
@@ -38,8 +41,8 @@ def prepare_datafile(stage: str, config: OmegaConf, log_dir: str) -> None:
     else:
         os.makedirs(os.path.dirname(new_df), exist_ok=True)
 
-    new_df_writer = open(new_df, "w")
-    seen_speakers = 0
+    prepared_objs = list()
+    n_seen_speakers = 0
     for datafile in datafiles:
         too_short, too_long, included = list(), list(), list()
         speaker_ids = list()
@@ -58,9 +61,10 @@ def prepare_datafile(stage: str, config: OmegaConf, log_dir: str) -> None:
                 spk = datafile + "_" + obj["label"]
                 if spk not in speaker_ids:
                     speaker_ids.append(spk)
-                obj["speaker_id"] = seen_speakers + speaker_ids.index(spk)
-                new_df_writer.write(json.dumps(obj) + "\n")
-        seen_speakers += len(speaker_ids)
+                obj["speaker_id"] = n_seen_speakers + speaker_ids.index(spk)
+                prepared_objs.append(obj)
+
+        n_seen_speakers += len(speaker_ids)
 
         LOGGER.info(
             f"{len(included)} samples included ({round(sum(included) / 3600, 3 )} h)"
@@ -72,5 +76,22 @@ def prepare_datafile(stage: str, config: OmegaConf, log_dir: str) -> None:
             f"{len(too_long)} samples too long ({round(sum(too_long) / 3600, 3 )} h)"
         )
 
-    new_df_writer.close()
+    prepared_objs.sort(key=lambda x: x["duration"], reverse=True)
+    with open(new_df, "w") as new_df_writer:
+        for obj in prepared_objs:
+            new_df_writer.write(json.dumps(obj) + "\n")
+
     LOGGER.info(f"Done with datafile prep for stage {stage}")
+    return new_df
+
+
+def sort_datafile(path: str):
+    """
+    Sort the samples of the datafile according to its duration in reverse order (the
+    longest sample goes first), and dump them again into the same file.
+    """
+    objs = [json.loads(line) for line in open(path)]
+    objs.sort(key=lambda x: x["duration"], reverse=True)
+    with open(path, "w") as f:
+        for obj in objs:
+            f.write(json.dumps(obj) + "\n")

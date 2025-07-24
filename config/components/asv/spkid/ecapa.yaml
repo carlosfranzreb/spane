@@ -1,0 +1,7 @@
+spkid:
+  cls: spkanon_eval.featex.SpkId # cls that extracts this feature
+  path: speechbrain/spkrec-ecapa-voxceleb # path to ckpt or name of pretrained model
+  ckpt: ${eval.components.asv.spkid_ckpt} # path to ckpt of embedding model
+  train: ${eval.components.asv.train_spkid}
+  num_workers: ${data.config.num_workers}
+  train_config: spkanon_eval/config/components/asv/spkid/train_ecapa.yaml

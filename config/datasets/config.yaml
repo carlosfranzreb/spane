@@ -1,0 +1,7 @@
+config:
+  num_workers: 0
+  sample_rate: 16000 # SR used to store anon. data and for the eval.
+  sample_rate_in: ${sample_rate_in} # SR expected by the anon. system
+  sample_rate_out: ${sample_rate_out} # SR output by the anon. system
+  root_folder: /Users/cafr02/datasets
+  max_ratio: ${max_ratio}

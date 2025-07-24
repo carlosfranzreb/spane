@@ -1,0 +1,28 @@
+datasets_cfg: spkanon_eval/config/datasets/librispeech.yaml
+seed: 0
+log_dir: logs/knnvc
+device: cpu # overwritten on runtime
+
+inference:
+  run: false # store anonymized utterances; can be true, false or a path to an exp folder
+  input: # input of the `infer` method of the anonymizer
+    spectrogram: spectrogram # key under which the spectrogram can be found
+    target: target
+
+target_selection_cfg: spkanon_eval/config/components/target_selection/random.yaml
+pipeline_cfg: spkanon_eval/spkanon_models/knnvc/config.yaml # must clone spkanon_models repo first (see README)
+target_feats: null
+
+eval: # calls func `eval_dir` of each component, passing exp_folder and config
+  config:
+    seed: 300
+    baseline: false # non-anonymized speech is evaluated; inference and train must be false, eval must be present
+    exp_folder: null # if not null, this folder is evaluated instead of current exp_folder
+
+  components:
+    asv_cfg: spkanon_eval/config/components/asv/config.yaml
+    small_asr_cfg: spkanon_eval/config/components/asr/whisper_small.yaml
+    large_asr_cfg: spkanon_eval/config/components/asr/whisper_large.yaml
+    ser_cfg: spkanon_eval/config/components/ser/audeering_w2v.yaml
+    naturalness_cfg: spkanon_eval/config/components/naturalness/nisqa.yaml
+    performance_cfg: spkanon_eval/config/components/performance/performance_20s.yaml

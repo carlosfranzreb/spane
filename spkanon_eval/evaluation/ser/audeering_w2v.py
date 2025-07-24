@@ -1,18 +1,20 @@
 import os
 import logging
+from copy import deepcopy
 
 import torch
+from torch.nn.utils.rnn import pad_sequence
 import torchaudio
 from torchaudio.transforms import Resample
 from transformers import Wav2Vec2Processor
 import numpy as np
+from tqdm import tqdm
 
 from spkanon_eval.evaluate import SAMPLE_RATE
 from spkanon_eval.evaluation.ser.model_utils import EmotionModel
 from spkanon_eval.evaluation.ser.analysis_utils import analyse_func, headers_func
 from spkanon_eval.evaluation.analysis import analyse_results
-from spkanon_eval.datamodules.dataloader import eval_dataloader
-from spkanon_eval.datamodules.collator import collate_fn
+from spkanon_eval.datamodules import eval_dataloader
 from spkanon_eval.component_definitions import InferComponent, EvalComponent
 
 
@@ -22,14 +24,11 @@ LOGGER = logging.getLogger("progress")
 class EmotionEvaluator(InferComponent, EvalComponent):
     def __init__(self, config, device, **kwargs):
         self.config = config
+        self.config.data.config.sample_rate_out = SAMPLE_RATE
         self.device = device
         self.processor = Wav2Vec2Processor.from_pretrained(config.init)
         self.model = EmotionModel.from_pretrained(config.init).to(device)
         self.model.eval()
-
-        # prepare the config for the dataloader
-        self.config.data.config.batch_size = config.batch_size
-        self.config.data.config.sample_rate = SAMPLE_RATE
 
     def to(self, device):
         self.device = device
@@ -56,15 +55,15 @@ class EmotionEvaluator(InferComponent, EvalComponent):
         Args:
             exp_folder: path to the experiment folder
             datafile: datafile to evaluate
-            is_baseline: whether the baseline is being evaluated
+            is_baseline: whether original data is being evaluated. If not, we compare
+                the anonymized samples with their original counterparts.
         """
         eval_dir = "ser-audeering-w2v"
         if is_baseline:
             eval_dir += "-baseline"
-        dump_folder = os.path.join(exp_folder, "eval", eval_dir)
 
+        dump_folder = os.path.join(exp_folder, "eval", eval_dir)
         os.makedirs(dump_folder, exist_ok=True)
-        root_folder = os.path.join(exp_folder, "results")
 
         # init the lists that will store the results to be analysed later
         dims = {"arousal": [], "dominance": [], "valence": []}
@@ -80,11 +79,17 @@ class EmotionEvaluator(InferComponent, EvalComponent):
                 f.write(" ".join(dims) + " ")
                 f.write(" ".join([f"{dim}_diff" for dim in dims]) + "\n")
 
-        for _, batch, sample_data in eval_dataloader(
-            self.config.data.config, datafile, self.device
+        dl_config = deepcopy(self.config.data.config)
+        dl_config.max_ratio = 0.05
+        for batch, sample_data in tqdm(
+            eval_dataloader(dl_config, datafile, self),
+            desc="Evaluating emotional samples",
         ):
             # compute the emotion dimensions for the batch
             embs_y, dims_y = self.run(batch)
+            del batch
+            embs_y = embs_y.cpu()
+            dims_y = dims_y.cpu()
 
             # if we are evaluating the baseline, dump the dims and continue
             if is_baseline:
@@ -97,28 +102,22 @@ class EmotionEvaluator(InferComponent, EvalComponent):
                 continue
 
             # compute the emotion dimensions of the original audio
-            audios_x = [
-                torchaudio.load(
-                    s["path"].replace(f"./{exp_folder}/results", root_folder)
-                )
-                for s in sample_data
-            ]
-            resampled_x = list()
-            for audio, sr in audios_x:
-                if sr != SAMPLE_RATE:
-                    audio = Resample(sr, SAMPLE_RATE)(audio)
-                resampled_x.append(audio)
-            batch_x = collate_fn(
-                [
-                    [
-                        resampled_x[i].squeeze(),
-                        torch.tensor([0]),
-                        resampled_x[i].squeeze().shape[0],
-                    ]
-                    for i in range(len(resampled_x))
-                ]
-            )
+            audios_x = list()
+            for s in sample_data:
+                f_anon = s["path"]
+                anon_folder_end = f_anon.index("/results/eval")
+                anon_folder = f_anon[:anon_folder_end] + "/results/eval"
+                f_orig = f_anon.replace(anon_folder, self.config.root_folder)
+                audio, sr = torchaudio.load(f_orig)
+                audios_x.append(audio.squeeze())
+
+            if sr != SAMPLE_RATE:
+                audios_x = Resample(sr, SAMPLE_RATE)(audios_x)
+
+            batch_x = [pad_sequence(audios_x, batch_first=True)]
             embs_x, dims_x = self.run(batch_x)
+            embs_x = embs_x.cpu()
+            dims_x = dims_x.cpu()
 
             # compare the emotion content of the original and the anonymized audio
             similarity = torch.nn.functional.cosine_similarity(embs_x, embs_y)
@@ -129,11 +128,9 @@ class EmotionEvaluator(InferComponent, EvalComponent):
                 for i in range(len(sample_data)):
                     # write the audio filepath and the embedding cosine similarity
                     f.write(f"{sample_data[i]['path']} {similarity[i]} ")
-                    # write the predicted emotion dimensions for the anonymized audio
-                    for j in range(len(dims)):
+                    for j in range(len(dims)):  # predicted dimensions
                         f.write(f"{dims_y[i][j]} ")
-                    # write the difference between the original and the anonymized audio
-                    for j in range(len(dims)):
+                    for j in range(len(dims)):  # difference with original
                         f.write(f"{dim_diff[i][j]} ")
                     f.write("\n")
 

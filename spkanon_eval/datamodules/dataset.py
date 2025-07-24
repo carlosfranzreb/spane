@@ -7,15 +7,17 @@ where the audio is resampled to the given sampling rate.
 import json
 import logging
 
-import torch
+from torch import Tensor, tensor
+from torch.utils.data import Dataset
+from torch.nn.utils.rnn import pad_sequence
 import torchaudio
 
 
 LOGGER = logging.getLogger("progress")
 
 
-class SpeakerIdDataset(torch.utils.data.Dataset):
-    def __init__(self, datafile: str, sample_rate: int) -> None:
+class SpeakerIdDataset(Dataset):
+    def __init__(self, datafile: str, sample_rate: int, chunk_sizes: dict) -> None:
         """
         Create a dataset from the given datafile. The datafile should be a text file,
         comprising one JSON object per line. Each JSON object should have at least the
@@ -23,38 +25,48 @@ class SpeakerIdDataset(torch.utils.data.Dataset):
 
         - "path": path to the audio file
         - "speaker_id": a unique integer identifying the speaker
+
+        The dataset returns tuples of (audio, speaker, n_samples), where the audio is
+        resampled to the given sampling rate. The n_samples is the number of samples in
+        the audio file.
+
+        Args:
+            datafile: path to the datafile. We expect it to be sorted in descending
+                order of audio duration.
+            sample_rate: the sampling rate to resample the audio to
+            chunk_sizes: a dictionary mapping the maximum duration of a batch to the
+                number of samples in the batch. This is used to maximize GPU usage.
         """
         super().__init__()
         self.sample_rate = sample_rate
         self.datafile = datafile
-        self.n_samples = 0
-        with open(self.datafile) as f:
-            for _ in f:
-                self.n_samples += 1
+        self.data = [json.loads(line) for line in open(datafile)]
+
+        # aggregate the sorted data into chunks
+        data_chunks = [[self.data[0]]]
+        max_dur_key = min([k for k in chunk_sizes if k > self.data[0]["duration"]])
+        for sample in self.data[1:]:
+            if len(data_chunks[-1]) < chunk_sizes[max_dur_key]:
+                data_chunks[-1].append(sample)
+            else:
+                data_chunks.append([sample])
+                max_dur_key = min([k for k in chunk_sizes if k > sample["duration"]])
+        self.data = data_chunks
 
     def __len__(self) -> int:
-        return self.n_samples
+        return len(self.data)
 
-    def __getitem__(self, sample_idx: int) -> tuple[torch.Tensor, str]:
-        """
-        Return the `sample_idx`-th sample of the dataset. The id is the index of the
-        sample when considering all the datafiles as a single dataset. The item is
-        returned as a tuple of (audio, speaker, n_samples), where the audio is
-        resampled to the given sampling rate.
-        """
-
-        # load the audio and the tokens
-        with open(self.datafile) as f:
-            for line_idx, line in enumerate(f):
-                if line_idx == sample_idx:
-                    break
-
-        obj = json.loads(line)
-        audio = load_audio(obj["path"], self.sample_rate)
-        return (audio, obj["speaker_id"], audio.shape[0])
+    def __getitem__(self, batch_idx: int) -> tuple[Tensor, Tensor, Tensor]:
+        """Return the `batch_idx`-th batch of the dataset."""
+        objs = self.data[batch_idx]
+        audios = [load_audio(obj["path"], self.sample_rate) for obj in objs]
+        speaker_ids = tensor([int(obj["speaker_id"]) for obj in objs])
+        audio_lens = tensor([audio.shape[0] for audio in audios])
+        audios = pad_sequence(audios, batch_first=True)
+        return audios, speaker_ids, audio_lens
 
 
-def load_audio(audio_path: str, sample_rate: int) -> torch.Tensor:
+def load_audio(audio_path: str, sample_rate: int) -> Tensor:
     """
     Load the audio from the given path. If the sampling rate is different from
     given sampling rate, resample the audio. Return the waveform as a 1D tensor.

@@ -1,6 +1,8 @@
 import os
 import logging
 import json
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 
@@ -8,14 +10,29 @@ import numpy as np
 LOGGER = logging.getLogger("progress")
 
 
-def analyse_results(dump_folder, datafile, data, analyse_func, headers_func):
+def analyse_results(
+    dump_folder: str,
+    datafile: str,
+    data: Any,
+    analyse_func: Callable,
+    headers_func: Callable,
+):
     """
-    Analyze the results for a given datafile and store them in the given dump
-    older, in a file that averages over the samples of the datafile. The args are:
+    Analyse the results of an evaluation for a given datafile and store them in the
+    given dump folder, in a file that averages over the samples of the datafile. The
+    analysis is run for the whole datafile, and also for its individual population
+    segments (gender, age, or whatever is defined in the datafile).
 
+    Args:
     - dump_folder: the folder where to store the results; each characteristic is stored
         in a separate file, for all the datafiles.
-    - datafile: the name of the datafile, to... TODO
+    - datafile: the name of the datafile whose results should be analysed.
+    - data: the results of the evaluation that will be analysed here. Their format must
+        conform with the expected input of the `analyse_func` function.
+    - analyse_func: function that computes some aggregated statistics given
+        evaluation results.
+    - headers_func: function to create a dump file for dumping the analysis results with
+        the appropriate headers.
     """
 
     datafile_name = os.path.splitext(os.path.basename(datafile))[0]

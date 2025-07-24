@@ -51,6 +51,7 @@ def create_file(data_file, dump_file, root_folder, max_duration, min_utts=2):
                         "gender": row["gender"],
                         "accent": row["accents"],
                         "age": row["age"],
+                        "dataset": "common_voice"
                     }
                 )
                 + "\n"
@@ -60,9 +61,9 @@ def create_file(data_file, dump_file, root_folder, max_duration, min_utts=2):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--data_file", help="Path to the CV file (TSV)")
-    parser.add_argument("--dump_file", help="Path to the dump file (TXT)")
-    parser.add_argument("--root_folder", help="Path that will be replaced with {root}")
+    parser.add_argument("data_file", help="Path to the CV file (TSV)")
+    parser.add_argument("dump_file", help="Path to the dump file (TXT)")
+    parser.add_argument("root_folder", help="Path that will be replaced with {root}")
     parser.add_argument(
         "--max_duration", type=int, help="Max. duration of the samples (in seconds)"
     )

@@ -4,11 +4,8 @@ This base class should be inherited by all test classes.
     and experiment and delete it at the end.
 """
 
-
-import os
 import unittest
 from argparse import ArgumentParser
-from shutil import rmtree
 from tempfile import NamedTemporaryFile
 
 from omegaconf import OmegaConf
@@ -36,13 +33,16 @@ class BaseTestClass(unittest.TestCase):
                 "name": "Test",
                 "inference": {
                     "run": True,
+                    "consistent_targets": False,
+                    "gender_conversion": None,
                     "input": {"spectrogram": "spectrogram", "target": "target"},
                 },
                 "seed": 0,
                 "log_dir": LOG_DIR,
                 "device": "cpu",
-                "sample_rate": 24000,
-                "batch_size": 2,
+                "sample_rate_in": 16000,
+                "sample_rate_out": 16000,
+                "target_selection_cfg": "spkanon_eval/config/components/target_selection/random.yaml",
                 "featex": {
                     "spectrogram": {
                         "cls": "spkanon_eval.featex.spectrogram.SpecExtractor",
@@ -52,16 +52,34 @@ class BaseTestClass(unittest.TestCase):
                         "hop_length": 300,
                     }
                 },
+                "featproc": {
+                    "dummy": {
+                        "cls": "spkanon_eval.featproc.dummy.DummyConverter",
+                        "input": {
+                            "spectrogram": "spectrogram",
+                            "n_frames": "n_frames",
+                            "source": "source",
+                            "target": "target",
+                        },
+                        "n_targets": 20,
+                    },
+                    "output": {
+                        "featex": [],
+                        "featproc": ["spectrogram", "n_frames", "target"],
+                    },
+                },
                 "synthesis": {
                     "cls": "spkanon_eval.synthesis.dummy.DummySynthesizer",
-                    "sample_rate": "${sample_rate}",
+                    "sample_rate_in": "${sample_rate_in}",
+                    "sample_rate_out": "${sample_rate_out}",
                     "input": {"spectrogram": "spectrogram", "n_frames": "n_frames"},
                 },
                 "data": {
                     "config": {
                         "root_folder": "spkanon_eval/tests/data",
-                        "sample_rate": "${sample_rate}",
-                        "batch_size": "${batch_size}",
+                        "sample_rate": 16000,
+                        "sample_rate_in": "${sample_rate_in}",
+                        "sample_rate_out": "${sample_rate_out}",
                     },
                     "datasets": {
                         "eval": [
@@ -74,7 +92,7 @@ class BaseTestClass(unittest.TestCase):
                     "config": {
                         "baseline": False,
                         "exp_folder": None,
-                        "sample_rate": "${synthesis.sample_rate}",
+                        "sample_rate_in": "${synthesis.sample_rate_out}",
                     },
                     "components": dict(),  # will be filled by the test class
                 },
@@ -89,12 +107,13 @@ def run_pipeline(config):
     args = ArgumentParser()
     args.device = config.device
     args.num_workers = 0
+    args.config_overrides = dict()
 
     # save the config to a file and pass the file to the setup function
     with NamedTemporaryFile(mode="w+", encoding="utf-8") as tmp_file:
         OmegaConf.save(config, tmp_file.name)
         args.config = tmp_file.name
-        config, log_dir = setup(args)
+        config = setup(args)
 
-    main(config, log_dir)
-    return config, log_dir
+    main(config)
+    return config

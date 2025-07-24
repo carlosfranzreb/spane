@@ -1,3 +1,4 @@
 target_selection:
-  cls: spkanon_eval.target_selection.random.RandomSelector
-  consistent_targets: true # whether the same target should always be used for the same source
+  cls: spkanon_eval.target_selection.RandomSelector
+  consistent_targets: ${inference.consistent_targets} # whether the same target should always be used for the same source
+  gender_conversion: ${inference.gender_conversion}

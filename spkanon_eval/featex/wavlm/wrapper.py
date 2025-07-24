@@ -1,5 +1,5 @@
 import torch
-from omegaconf import OmegaConf
+from omegaconf import OmegaConf, ListConfig
 
 from .wavlm_model import WavLM, WavLMConfig
 
@@ -26,6 +26,7 @@ class WavlmWrapper(InferComponent):
         self.device = device
         self.config = config
 
+    @torch.inference_mode()
     def run(self, batch: list) -> dict:
         """
         Pases the batch through the model until the specified layer and returns the
@@ -40,7 +41,21 @@ class WavlmWrapper(InferComponent):
             the number of feats for each sample under "n_feats".
         """
         with torch.no_grad():
-            out = self.model.extract_features(batch[0], output_layer=self.config.layer)[0]
+            if isinstance(self.config.layer, ListConfig):
+                last_feats, all_feats = self.model.extract_features(
+                    batch[0],
+                    ret_layer_results=True,
+                    output_layer=max(self.config.layer),
+                )[0]
+                out = list()
+                for layer in self.config.layer:
+                    out.append(all_feats[layer][0].transpose(0, 1))
+                out = torch.stack(out)
+            else:
+                out = self.model.extract_features(
+                    batch[0], output_layer=self.config.layer
+                )[0]
+
         n_feats = batch[2] // self.config.hop_length
         return {"feats": out, "n_feats": n_feats}
 

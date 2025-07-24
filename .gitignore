@@ -4,14 +4,17 @@
 .code-server
 __pycache__
 venv
+build/lib
 pretrained_models
 checkpoints
 models
 tmp.py
 tmp.ipynb
-./NISQA
 
+./NISQA
 spkanon_models
+private_spkanon_models
 StarGANv2VC
 softvc_acoustic
 softvc_hifigan
+tests/logs/

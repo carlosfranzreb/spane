@@ -5,11 +5,11 @@ int. Given our use case, we store the speaker ID in the label field. We also sto
 the transcript and gender, which are used in the evaluation.
 """
 
-
 import os
 import json
 from argparse import ArgumentParser
 import torchaudio
+from tqdm import tqdm
 
 
 def create_file(folder, dump_file, root_folder, max_duration):
@@ -21,12 +21,16 @@ def create_file(folder, dump_file, root_folder, max_duration):
     - We remove the samples that are longer than the max. duration, defined by the
         max_duration parameter.
     """
+
+    if max_duration is None:
+        max_duration = float("inf")
+
     # get the parent folder of the given folder
     speakers_file = os.path.join(os.path.dirname(folder), "SPEAKERS.TXT")
     # create a writer object for the dump file
     writer = open(dump_file, "w")
     # iterate over the files in the folder
-    for dirpath, _, filenames in os.walk(folder):
+    for dirpath, _, filenames in tqdm(os.walk(folder)):
         for fname in filenames:
             if fname.endswith(".trans.txt"):
                 with open(os.path.join(dirpath, fname)) as f:
@@ -48,6 +52,7 @@ def create_file(folder, dump_file, root_folder, max_duration):
                                         "duration": duration,
                                         "label": spk_id,
                                         "gender": get_gender(spk_id, speakers_file),
+                                        "dataset": "librispeech",
                                     }
                                 )
                                 + "\n"
@@ -65,9 +70,9 @@ def get_gender(spk_id, speakers_file):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--folder", help="Path to the LibriSpeech directory")
-    parser.add_argument("--dump_file", help="Path to the dump file")
-    parser.add_argument("--root_folder", help="Path that will be replaced with {root}")
+    parser.add_argument("folder", help="Path to the LibriSpeech directory")
+    parser.add_argument("dump_file", help="Path to the dump file")
+    parser.add_argument("root_folder", help="Path that will be replaced with {root}")
     parser.add_argument(
         "--max_duration", type=int, help="Min. no. of utterances per speaker"
     )

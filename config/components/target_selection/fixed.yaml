@@ -1,6 +1,7 @@
 # the same target is always selected
 
 target_selection:
-  cls: spkanon_eval.target_selection.fixed.FixedSelector
+  cls: spkanon_eval.target_selection.FixedSelector
   consistent_targets: true # whether the same target should always be used for the same source
   target: ${target_speaker} # should be a valid target for the selected pipeline
+  gender_conversion: null

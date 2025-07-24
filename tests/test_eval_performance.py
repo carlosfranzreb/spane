@@ -8,7 +8,7 @@ for the debug data.
 import os
 import unittest
 import shutil
-import platform
+import sys
 
 from omegaconf import OmegaConf
 import torch
@@ -64,10 +64,13 @@ class TestEvalPerformance(unittest.TestCase):
             # for `cpu_specs.txt`, compare it with the CPU in this machine
             if fname == "cpu_specs.txt":
                 f_expected = os.path.join(results_dir, fname)
-                if platform.system() == "Darwin":
+                os = sys.platform
+                if os == "darwin":
                     os.system(f"sysctl -a | grep machdep.cpu > {f_expected}")
-                elif platform.system() == "Linux":
-                    os.system(f"cat /proc/cpuinfo > {f_expected}")
+                elif os == "linux":
+                    os.system(f"lscpu > {f_expected}")
+                else:
+                    raise NotImplementedError("Unsupported operating system.")
                 with open(os.path.join(results_dir, fname)) as f:
                     expected = f.readlines()
                 with self.subTest(fname=fname):

@@ -10,7 +10,7 @@ from omegaconf import DictConfig
 from tqdm import tqdm
 
 from spkanon_eval.component_definitions import EvalComponent
-from spkanon_eval.datamodules.batch_size_calculator import max_batch_size, map_audio_to_dur
+from spkanon_eval.datamodules.batch_size_calculator import map_audio_to_dur
 from spkanon_eval.anonymizer import Anonymizer
 
 LOGGER = logging.getLogger("progress")
@@ -54,14 +54,14 @@ class PerformanceEvaluator(EvalComponent):
             )
 
         # write the model's CPU specs to the experiment folder
-        operative_system = sys.platform
+        operating_system = sys.platform
         f_specs = os.path.join(dump_folder, "cpu_specs.txt")
-        if operative_system == "darwin":
+        if operating_system == "darwin":
             os.system(f"sysctl -a | grep machdep.cpu > {f_specs}")
-        elif operative_system == "linux":
+        elif operating_system == "linux":
             os.system(f"lscpu > {f_specs}")
         else:
-            LOGGER.error(f"Can't get the CPU specs of OS {operative_system}")
+            LOGGER.error(f"Can't get the CPU specs of OS {operating_system}")
 
         # evaluate the model's performance on the CPU
         device = "cpu"
@@ -157,10 +157,7 @@ def run_gpu(
             torch.ones(batch_size, device=model.device, dtype=torch.int32)
             * audio.shape[0],
         ]
-        data = [
-            {"speaker_id": val.item(), "gender": True}
-            for val in batch[1]
-        ]
+        data = [{"speaker_id": val.item(), "gender": True} for val in batch[1]]
 
         # warm-up
         for _ in range(10):
@@ -211,10 +208,7 @@ def run_cpu(
         torch.randint(10, [batch_size], device=model.device),
         torch.ones(batch_size, device=model.device, dtype=torch.int32) * audio.shape[0],
     ]
-    data = [
-        {"speaker_id": val.item(), "gender": True}
-        for val in batch[1]
-    ]
+    data = [{"speaker_id": val.item(), "gender": True} for val in batch[1]]
 
     # warm-up
     for _ in range(10):

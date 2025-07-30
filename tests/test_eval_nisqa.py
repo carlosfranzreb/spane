@@ -19,15 +19,15 @@ class TestEvalNisqa(unittest.TestCase):
     def setUp(self) -> None:
         """Run NISQA with the LibriSpeech dev-clean data."""
 
-        self.exp_folder = "spkanon_eval/tests/logs/naturalness_nisqa"
+        self.exp_folder = "spane/tests/logs/naturalness_nisqa"
         if os.path.isdir(self.exp_folder):
             shutil.rmtree(self.exp_folder)
         os.makedirs(os.path.join(self.exp_folder))
-        self.datafile = "spkanon_eval/tests/datafiles/ls-dev-clean-2.txt"
+        self.datafile = "spane/tests/datafiles/ls-dev-clean-2.txt"
 
-        nisqa_config = OmegaConf.load(
-            "spkanon_eval/config/components/naturalness/nisqa.yaml"
-        )["naturalness_nisqa"]
+        nisqa_config = OmegaConf.load("spane/config/components/naturalness/nisqa.yaml")[
+            "naturalness_nisqa"
+        ]
         nisqa_config.num_workers = 0
         self.nisqa = NisqaEvaluator(nisqa_config, "cpu")
         self.nisqa.eval_dir(self.exp_folder, self.datafile)

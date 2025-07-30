@@ -16,17 +16,15 @@ class TestEvalDataloader(unittest.TestCase):
             dumped there.
         - Get the test datafiles.
         """
-        self.datafile = "spkanon_eval/tests/datafiles/ls-dev-clean-2.txt"
+        self.datafile = "spane/tests/datafiles/ls-dev-clean-2.txt"
         self.device = "cpu"
-        self.config = OmegaConf.load("spkanon_eval/config/datasets/config.yaml")[
-            "config"
-        ]
+        self.config = OmegaConf.load("spane/config/datasets/config.yaml")["config"]
         self.config.sample_rate = 16000
         self.config.sample_rate_out = 16000
         self.config.sample_rate_in = 24000
 
         whisper_config = OmegaConf.load(
-            "spkanon_eval/config/components/asr/whisper_tiny.yaml"
+            "spane/config/components/asr/whisper_tiny.yaml"
         )["whisper_tiny"]
         self.model = Whisper(whisper_config, self.device)
 

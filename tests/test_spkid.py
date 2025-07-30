@@ -36,10 +36,10 @@ class TestSpkid(unittest.TestCase):
                 "path": "speechbrain/spkrec-xvect-voxceleb",
                 "emb_model_ckpt": None,
                 "num_workers": 0,
-                "train_config": "spkanon_eval/config/components/asv/spkid/train_xvector_debug.yaml",
+                "train_config": "spane/config/components/asv/spkid/train_xvector_debug.yaml",
             }
         )
-        self.data_dir = "spkanon_eval/tests/data/LibriSpeech/dev-clean-2/1988/24833"
+        self.data_dir = "spane/tests/data/LibriSpeech/dev-clean-2/1988/24833"
 
     def get_batch(self, samples: list[str]) -> list[Tensor, Tensor, Tensor]:
         """Return a batch given the samples."""
@@ -102,11 +102,11 @@ class TestSpkid(unittest.TestCase):
     def test_train(self):
         """Test that the spkid model is trained on the given datafile."""
 
-        exp_folder = "spkanon_eval/tests/logs/spkid_train"
+        exp_folder = "spane/tests/logs/spkid_train"
         if os.path.isdir(exp_folder):
             shutil.rmtree(exp_folder)
         os.makedirs(os.path.join(exp_folder))
-        datafile = "spkanon_eval/tests/datafiles/ls-dev-clean-2.txt"
+        datafile = "spane/tests/datafiles/ls-dev-clean-2.txt"
         n_speakers = 3
         model = SpkId(self.cfg, "cpu")
         old_state_dict = copy.deepcopy(model.model.state_dict())

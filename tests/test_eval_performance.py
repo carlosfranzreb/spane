@@ -35,15 +35,15 @@ class TestEvalPerformance(unittest.TestCase):
         """
 
         # create/empty experiment folder
-        exp_folder = "spkanon_eval/tests/logs/performance"
+        exp_folder = "spane/tests/logs/performance"
         if os.path.isdir(exp_folder):
             shutil.rmtree(exp_folder)
         os.makedirs(os.path.join(exp_folder))
 
         self.config = OmegaConf.load(
-            "spkanon_eval/config/components/performance/performance_20s.yaml"
+            "spane/config/components/performance/performance_20s.yaml"
         )["performance"]
-        self.config.data = OmegaConf.load("spkanon_eval/config/datasets/config.yaml")
+        self.config.data = OmegaConf.load("spane/config/datasets/config.yaml")
         self.config.data.config.sample_rate = 16000
         self.config.data.config.sample_rate_out = 16000
         self.config.data.config.sample_rate_in = 16000

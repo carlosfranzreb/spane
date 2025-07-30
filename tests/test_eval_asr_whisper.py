@@ -21,11 +21,11 @@ class TestEvalWhisper(unittest.TestCase):
         Create the evaluation component and run it with the LibriSpeech dev-clean data.
         """
 
-        self.exp_folder = "spkanon_eval/tests/logs/asr_whisper"
+        self.exp_folder = "spane/tests/logs/asr_whisper"
         if os.path.isdir(self.exp_folder):
             shutil.rmtree(self.exp_folder)
         os.makedirs(os.path.join(self.exp_folder))
-        self.datafile = "spkanon_eval/tests/datafiles/ls-dev-clean-2.txt"
+        self.datafile = "spane/tests/datafiles/ls-dev-clean-2.txt"
 
         # config = OmegaConf.create(
         #     {
@@ -42,10 +42,10 @@ class TestEvalWhisper(unittest.TestCase):
         #         },
         #     }
         # )
-        config = OmegaConf.load("spkanon_eval/config/components/asr/whisper_tiny.yaml")[
+        config = OmegaConf.load("spane/config/components/asr/whisper_tiny.yaml")[
             "whisper_tiny"
         ]
-        config.data = OmegaConf.load("spkanon_eval/config/datasets/config.yaml")
+        config.data = OmegaConf.load("spane/config/datasets/config.yaml")
         config.data.config.sample_rate = 16000
         config.data.config.sample_rate_out = 16000
         config.data.config.sample_rate_in = 16000

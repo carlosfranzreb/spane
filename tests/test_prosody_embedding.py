@@ -11,16 +11,16 @@ class TestProsodyEmbedding(unittest.TestCase):
     def setUp(self):
         """Set up test configuration and mock audio data."""
         # Create test configuration
-        self.config = OmegaConf.load(
-            "spkanon_eval/config/components/asv/spkid/prosody.yaml"
-        )["spkid"]
+        self.config = OmegaConf.load("spane/config/components/asv/spkid/prosody.yaml")[
+            "spkid"
+        ]
 
         self.device = "cpu"
         self.prosody_model = ProsodyEmbedding(self.config, self.device)
 
         # Create a batch
         audio = torchaudio.load(
-            "spkanon_eval/tests/data/LibriSpeech/dev-clean-2/1988/24833/1988-24833-0000.flac"
+            "spane/tests/data/LibriSpeech/dev-clean-2/1988/24833/1988-24833-0000.flac"
         )[0].squeeze()
         audios = torch.stack([audio, audio], dim=0)
         self.batch = [

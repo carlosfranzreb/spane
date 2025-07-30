@@ -9,14 +9,14 @@ from spkanon_eval.evaluation.asv.trials_enrolls import split_trials_enrolls
 class TestTrialsEnrolls(unittest.TestCase):
     def setUp(self):
         # create/empty experiment folder
-        self.exp_folder = "spkanon_eval/tests/logs/split_trials_enrolls"
+        self.exp_folder = "spane/tests/logs/split_trials_enrolls"
         if os.path.isdir(self.exp_folder):
             shutil.rmtree(self.exp_folder)
         os.makedirs(os.path.join(self.exp_folder, "data"))
 
         # add the original datafile to the experiment folder
-        self.root_folder = "spkanon_eval/tests/data"
-        datafile = "spkanon_eval/tests/datafiles/ls-dev-clean-2.txt"
+        self.root_folder = "spane/tests/data"
+        datafile = "spane/tests/datafiles/ls-dev-clean-2.txt"
         shutil.copy(datafile, os.path.join(self.exp_folder, "data", "eval.txt"))
 
         # create an anonymized datafile in the experiment folder

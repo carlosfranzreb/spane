@@ -27,15 +27,9 @@ from base import BaseTestClass, run_pipeline
 class TestEvalASV(BaseTestClass):
     def setUp(self):
         super().setUp()
-        self.informed_config = OmegaConf.load(
-            "spkanon_eval/config/components/asv/config.yaml"
-        )
+        self.informed_config = OmegaConf.load("spane/config/components/asv/config.yaml")
         self.informed_config.asv.backend = "plda"
         self.informed_config.asv.train_spkid = False
-        # self.informed_config.asv.spkid = OmegaConf.load(
-        #     "spkanon_eval/config/components/asv/spkid/xvector.yaml"
-        # )["spkid"]
-        # del self.informed_config.asv.spkid_cfg
 
         self.ignorant_config = self.informed_config.copy()
         self.ignorant_config.asv.scenario = "ignorant"
@@ -183,7 +177,7 @@ class TestEvalASV(BaseTestClass):
         train_file = train_files[0]
         self.assertEqual(
             train_file,
-            "spkanon_eval/data/debug/ls-dev-clean-2.txt",
+            "spane/data/debug/ls-dev-clean-2.txt",
             "Wrong train_eval dataset",
         )
 

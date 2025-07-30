@@ -15,7 +15,7 @@ from spkanon_eval.main import main
 
 
 MARKER_FILE = ".TEST-FOLDER"
-LOG_DIR = "spkanon_eval/tests/logs"
+LOG_DIR = "spane/tests/logs"
 
 
 class BaseTestClass(unittest.TestCase):
@@ -42,7 +42,7 @@ class BaseTestClass(unittest.TestCase):
                 "device": "cpu",
                 "sample_rate_in": 16000,
                 "sample_rate_out": 16000,
-                "target_selection_cfg": "spkanon_eval/config/components/target_selection/random.yaml",
+                "target_selection_cfg": "spane/config/components/target_selection/random.yaml",
                 "featex": {
                     "spectrogram": {
                         "cls": "spkanon_eval.featex.spectrogram.SpecExtractor",
@@ -76,16 +76,16 @@ class BaseTestClass(unittest.TestCase):
                 },
                 "data": {
                     "config": {
-                        "root_folder": "spkanon_eval/tests/data",
+                        "root_folder": "spane/tests/data",
                         "sample_rate": 16000,
                         "sample_rate_in": "${sample_rate_in}",
                         "sample_rate_out": "${sample_rate_out}",
                     },
                     "datasets": {
                         "eval": [
-                            "spkanon_eval/data/debug/ls-dev-clean-2.txt",
+                            "spane/data/debug/ls-dev-clean-2.txt",
                         ],
-                        "train_eval": ["spkanon_eval/data/debug/ls-dev-clean-2.txt"],
+                        "train_eval": ["spane/data/debug/ls-dev-clean-2.txt"],
                     },
                 },
                 "eval": {

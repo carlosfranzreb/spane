@@ -14,7 +14,7 @@ class TestDataset(unittest.TestCase):
             dumped there.
         - Get the test datafiles and create the dataset.
         """
-        self.datafile = "spkanon_eval/tests/datafiles/ls-dev-clean-2.txt"
+        self.datafile = "spane/tests/datafiles/ls-dev-clean-2.txt"
         self.sample_rate = 16000
         self.dataset = SpeakerIdDataset(self.datafile, self.sample_rate, {100: 1})
 

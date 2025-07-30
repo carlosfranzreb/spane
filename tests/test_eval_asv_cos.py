@@ -22,13 +22,11 @@ from base import BaseTestClass, run_pipeline
 class TestEvalASVCos(BaseTestClass):
     def setUp(self):
         super().setUp()
-        self.ignorant_config = OmegaConf.load(
-            "spkanon_eval/config/components/asv/config.yaml"
-        )
+        self.ignorant_config = OmegaConf.load("spane/config/components/asv/config.yaml")
         self.ignorant_config.asv.scenario = "ignorant"
         self.ignorant_config.asv.train = False
         self.ignorant_config.asv.spkid = OmegaConf.load(
-            "spkanon_eval/config/components/asv/spkid/xvector.yaml"
+            "spane/config/components/asv/spkid/xvector.yaml"
         )["spkid"]
 
     def test_results(self):

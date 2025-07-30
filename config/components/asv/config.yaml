@@ -3,7 +3,7 @@ asv:
   cls: spkanon_eval.evaluation.ASV
   scenario: semi-informed # attack scenario; can be ignorant or semi-informed
   train: true # set this to false if you are using checkpoints
-  spkid_cfg: spkanon_eval/config/components/asv/spkid/ecapa.yaml
+  spkid_cfg: spane/config/components/asv/spkid/ecapa.yaml
   spkid_ckpt: null
   train_spkid: true
   train_mean_spkemb: null

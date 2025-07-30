@@ -1,8 +1,8 @@
 data:
-  config_cfg: spkanon_eval/config/datasets/config.yaml
+  config_cfg: spane/config/datasets/config.yaml
   datasets:
     eval:
-      - spkanon_eval/data/msp_podcast/msp-test1.txt
-      - spkanon_eval/data/ravdess/ravdess.txt
+      - spane/data/msp_podcast/msp-test1.txt
+      - spane/data/ravdess/ravdess.txt
     targets:
-      - spkanon_eval/data/librispeech/ls-train-clean-100.txt
+      - spane/data/librispeech/ls-train-clean-100.txt

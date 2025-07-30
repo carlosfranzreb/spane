@@ -75,7 +75,7 @@ class BatchSizeCalculator:
 
         # load test audio used in the batches; e.g. needed for STT-TTS approach
         audio = torchaudio.load(
-            "spkanon_eval/tests/data/LibriSpeech/dev-clean-2/2412/153948/2412-153948-0000.flac"
+            "spane/tests/data/LibriSpeech/dev-clean-2/2412/153948/2412-153948-0000.flac"
         )[0].squeeze()
         audio.to(model.device)
 

@@ -1,14 +1,14 @@
 data:
-  config_cfg: spkanon_eval/config/datasets/config.yaml
+  config_cfg: spane/config/datasets/config.yaml
   datasets:
     eval:
-      - spkanon_eval/data/librispeech/ls-test-clean_max30s.txt
+      - spane/data/librispeech/ls-test-clean_max30s.txt
     train_eval:
-      - spkanon_eval/data/librispeech/ls-train-clean-360.txt
+      - spane/data/librispeech/ls-train-clean-360.txt
     targets:
-      - spkanon_eval/data/librispeech/ls-train-clean-100.txt
+      - spane/data/librispeech/ls-train-clean-100.txt
     asv:
       trials:
-        - spkanon_eval/data/librispeech/privacy_eval/ls-test-clean_trials.txt
+        - spane/data/librispeech/privacy_eval/ls-test-clean_trials.txt
       enrolls:
-        - spkanon_eval/data/librispeech/privacy_eval/ls-test-clean_trials.txt
+        - spane/data/librispeech/privacy_eval/ls-test-clean_trials.txt

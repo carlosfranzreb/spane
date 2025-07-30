@@ -108,7 +108,7 @@ def inference_time(
         f.write("input_duration inference_mean inference_std\n")
 
     audio = torchaudio.load(
-        "spkanon_eval/tests/data/LibriSpeech/dev-clean-2/2412/153948/2412-153948-0000.flac"
+        "spane/tests/data/LibriSpeech/dev-clean-2/2412/153948/2412-153948-0000.flac"
     )[0].squeeze()
 
     for duration in durations:

@@ -15,7 +15,7 @@ repos:
     hooks:
       - id: unittest-with-coverage
         name: unittest with coverage
-        entry: bash -c 'cd .. && ./spkanon_eval/build/run_tests.sh && cd ./spkanon_eval'
+        entry: bash -c 'cd .. && ./spane/build/run_tests.sh && cd ./spkanon_eval'
         language: system
         pass_filenames: false
         stages: [push]

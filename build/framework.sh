@@ -10,11 +10,11 @@ conda install -y 'ffmpeg<5'
 
 # install pip dependencies
 pip install --no-input --upgrade pip
-pip install --no-input -e ./spkanon_eval
+pip install --no-input -e ./spane
 
 # clone NISQA
-git clone https://github.com/gabrielmittag/NISQA.git ./spkanon_eval/NISQA
-export PYTHONPATH=$(pwd)/spkanon_eval:$PYTHONPATH
+git clone https://github.com/gabrielmittag/NISQA.git ./spane/NISQA
+export PYTHONPATH=$(pwd)/spane:$PYTHONPATH
 
 # run tests with coverage check
-bash ./spkanon_eval/build/run_tests.sh
+bash ./spane/build/run_tests.sh

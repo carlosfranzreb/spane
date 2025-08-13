@@ -158,3 +158,56 @@ class TestSpkid(unittest.TestCase):
         self.assertTrue(os.path.isfile(model_file))
 
         shutil.rmtree(exp_folder)
+
+    def test_al_training(self):
+        """
+        Test that adversarial training changes the spkid model's weights.
+
+        We train two models, one with and one without adversarial loss, and check
+        that their weights are different.
+        """
+        exp_folder_no_al = "spane/tests/logs/spkid_train_no_al"
+        exp_folder_al = "spane/tests/logs/spkid_train_al"
+        for folder in [exp_folder_no_al, exp_folder_al]:
+            if os.path.isdir(folder):
+                shutil.rmtree(folder)
+
+        datafile = "spane/tests/datafiles/ls-dev-clean-2.txt"
+        n_speakers = 3
+        n_targets = 3
+
+        # Setup configs and initialize models
+        cfg_no_al = self.cfg
+        cfg_al = copy.deepcopy(self.cfg)
+        cfg_al.al_weight.n_epochs_zero = 0
+        cfg_al.al_weight.n_epochs_max = 1
+        cfg_al.al_weight.max_weight = 1.0
+
+        model_no_al = SpkId(cfg_no_al, "cpu")
+        model_al = SpkId(cfg_al, "cpu")
+
+        # Check that they start with the same weights
+        for p1, p2 in zip(
+            model_no_al.model.mods.embedding_model.state_dict().values(),
+            model_al.model.mods.embedding_model.state_dict().values(),
+        ):
+            self.assertTrue(torch.equal(p1, p2))
+
+        # Train models
+        model_no_al.train(exp_folder_no_al, datafile, n_speakers, n_targets)
+        model_al.train(exp_folder_al, datafile, n_speakers, n_targets)
+
+        # The weights of the two models should now be different.
+        state_dict_no_al = model_no_al.model.mods.embedding_model.state_dict()
+        state_dict_al = model_al.model.mods.embedding_model.state_dict()
+        are_different = any(
+            not torch.equal(p1, p2)
+            for p1, p2 in zip(state_dict_no_al.values(), state_dict_al.values())
+        )
+        self.assertTrue(
+            are_different,
+            "Model weights should be different after AL training.",
+        )
+
+        for folder in [exp_folder_no_al, exp_folder_al]:
+            shutil.rmtree(folder)

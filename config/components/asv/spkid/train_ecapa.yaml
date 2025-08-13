@@ -16,7 +16,13 @@ val_ratio: 0.1
 # Folder to extract data augmentation files
 rir_folder: checkpoints/rirs
 
-# Training parameters
+# AL Task weighting: weight will be linearly increased (TODO: do I need this here?)
+n_epochs_zero: !PLACEHOLDER
+
+n_epochs_max: !PLACEHOLDER
+
+max_weight: !PLACEHOLDER
+
 number_of_epochs: 10
 batch_size: 256
 lr: 0.001
@@ -33,8 +39,9 @@ left_frames: 0
 right_frames: 0
 deltas: false
 
-# Number of speakers
-out_n_neurons: !PLACEHOLDER
+# Number of speakers and targets
+out_n_neurons_src: !PLACEHOLDER
+out_n_neurons_tgt: !PLACEHOLDER
 
 dataloader_options:
   batch_size: !ref <batch_size>
@@ -57,9 +64,13 @@ embedding_model: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
   attention_channels: 128
   lin_neurons: 192
 
-classifier: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
+classifier_src: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
   input_size: 192
-  out_neurons: !ref <out_n_neurons>
+  out_neurons: !ref <out_n_neurons_src>
+
+classifier_tgt: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
+  input_size: 192
+  out_neurons: !ref <out_n_neurons_tgt>
 
 epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
   limit: !ref <number_of_epochs>
@@ -76,7 +87,8 @@ mean_var_norm: !new:speechbrain.processing.features.InputNormalization
 modules:
   compute_features: !ref <compute_features>
   embedding_model: !ref <embedding_model>
-  classifier: !ref <classifier>
+  classifier_src: !ref <classifier_src>
+  classifier_tgt: !ref <classifier_tgt>
   mean_var_norm: !ref <mean_var_norm>
 
 compute_cost: !new:speechbrain.nnet.losses.LogSoftmaxWrapper
@@ -104,7 +116,8 @@ checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
   checkpoints_dir: !ref <save_folder>
   recoverables:
     embedding_model: !ref <embedding_model>
-    classifier: !ref <classifier>
+    classifier_src: !ref <classifier_src>
+    classifier_tgt: !ref <classifier_tgt>
     normalizer: !ref <mean_var_norm>
     counter: !ref <epoch_counter>
     lr_annealing: !ref <lr_annealing>

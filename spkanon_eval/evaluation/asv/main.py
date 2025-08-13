@@ -108,8 +108,18 @@ class ASV(EvalComponent):
 
         # fine-tune SpkId model and store the ckpt if needed
         if self.config.spkid.train:
+
+            # get the number of targets from the corresponding datafile
+            df_dir = os.path.dirname(datafile)
+            target_df = os.path.join(df_dir, "targets.txt")
+            if not os.path.exists(target_df):
+                n_targets = 1
+            else:
+                n_targets = count_speakers(target_df)
+
+            n_sources = count_speakers(datafile)
             self.spkid_model.train(
-                os.path.join(dump_dir, "spkid"), datafile, count_speakers(datafile)
+                os.path.join(dump_dir, "spkid"), datafile, n_sources, n_targets
             )
 
         # compute SpkId vectors of all utterances with spkid model and center them

@@ -1,26 +1,57 @@
-#!/usr/bin/python3
-"""Recipe for training speaker embeddings (e.g, xvectors) using the VoxCeleb Dataset.
-We employ an encoder followed by a speaker classifier.
+"""
+Recipe for training speaker embeddings based on Speechbrain's.
 
-To run this recipe, use the following command:
-> python train_speaker_embeddings.py {hyperparameter_file}
-
-Using your own hyperparameter file or one of the following:
-    hyperparams/train_x_vectors.yaml (for standard xvectors)
-    hyperparams/train_ecapa_tdnn.yaml (for the ecapa+tdnn system)
-
-Author
-    * Mirco Ravanelli 2020
-    * Hwidong Na 2020
-    * Nauman Dawalatabad 2020
+It includes a target classifier that informs us about how much target information
+is encoded by the speaker recognizer. The recognizer can be encouraged to remove
+target information with adversarial learning.
 """
 
-
 import torch
+from torch import nn, Tensor
+from torch.autograd import Function
 import torchaudio
 import speechbrain as sb
 from speechbrain.dataio.dataset import DynamicItemDataset
 from speechbrain.dataio.batch import PaddedBatch
+
+
+class GradReverse(Function):
+    """
+    Inspired by
+    https://discuss.pytorch.org/t/solved-reverse-gradients-in-backward-pass/3589/3
+
+    It should be called in the forward pass of your nn.Module like this:
+        x = GradReverse.apply(x, weight)
+
+    x is the tensor with the data; weight is the weighing factor to be applied only
+    in the backward pass. It is often called lambda in the literature.
+    """
+
+    @staticmethod
+    def forward(ctx, x: Tensor, weight: float) -> Tensor:
+        """
+        Store the passed weight in the context, to be used in the backward pass.
+        """
+        ctx.weight = weight
+        return x.view_as(x)
+
+    @staticmethod
+    def backward(ctx, grad_output: Tensor) -> Tensor:
+        """
+        Return two values, one per argument of the forward pass.
+        """
+        return grad_output.neg() * ctx.weight, None
+
+
+class AdversarialClassifier(nn.Module):
+    def __init__(self, classifier: nn.Module, weight: float):
+        super().__init__()
+        self.classifier = classifier
+        self.weight = weight
+
+    def forward(self, x: Tensor) -> Tensor:
+        x = GradReverse.apply(x, self.weight)
+        return self.classifier(x)
 
 
 class SpeakerBrain(sb.core.Brain):
@@ -33,53 +64,77 @@ class SpeakerBrain(sb.core.Brain):
         feats = self.modules.compute_features(wavs)
         feats = self.modules.mean_var_norm(feats, lens)
         embeddings = self.modules.embedding_model(feats)
-        outputs = self.modules.classifier(embeddings)
-
-        return outputs, lens
+        outputs_src = self.modules.classifier_src(embeddings)
+        outputs_tgt = self.modules.classifier_tgt(embeddings)
+        return outputs_src, outputs_tgt, lens
 
     def compute_objectives(self, predictions, batch, stage):
         """Computes the loss using speaker-id as label."""
-        predictions, lens = predictions
-        predictions = predictions.to(self.device)
+        predictions_src, predictions_tgt, lens = predictions
+        predictions_src = predictions_src.to(self.device)
+        predictions_tgt = predictions_tgt.to(self.device)
         lens = lens.to(self.device)
-        spkid = (
-            torch.tensor([int(spkid) for spkid in batch.spk_id_encoded])
+
+        sources = (
+            torch.tensor([int(spk) for spk in batch.source_speaker])
+            .unsqueeze(1)
+            .to(self.device)
+        )
+        targets = (
+            torch.tensor([int(spk) for spk in batch.target_speaker])
             .unsqueeze(1)
             .to(self.device)
         )
 
-        loss = self.hparams.compute_cost(predictions, spkid, lens)
+        loss_src = self.hparams.compute_cost(predictions_src, sources, lens)
+        loss_tgt = self.hparams.compute_cost(predictions_tgt, targets, lens)
+        loss = (loss_src + loss_tgt) / 2
+
         if stage == sb.Stage.TRAIN and hasattr(
             self.hparams.lr_annealing, "on_batch_end"
         ):
             self.hparams.lr_annealing.on_batch_end(self.optimizer)
 
         if stage != sb.Stage.TRAIN:
-            self.error_metrics.append(batch.id, predictions, spkid, lens)
+            self.error_metrics_src.append(batch.id, predictions_src, sources, lens)
+            self.error_metrics_tgt.append(batch.id, predictions_tgt, targets, lens)
 
         return loss
 
-    def on_stage_start(self, stage, epoch=None):
+    def on_stage_start(self, stage: sb.Stage, epoch: int):
         """Gets called at the beginning of an epoch."""
+        if stage == sb.Stage.VALID:
+            self.error_metrics_src = self.hparams.error_stats()
+            self.error_metrics_tgt = self.hparams.error_stats()
+            grad = False
+        else:
+            grad = True
+
+        # pre-pend GRL to the target classifier and update the weight
+        if stage.value == 1 and epoch == 1:
+            self.modules.classifier_tgt = AdversarialClassifier(
+                self.modules.classifier_tgt, 0.0
+            )
+        self.modules.classifier_tgt.weight = self.al_weights[epoch - 1]
+
         for module in [
             self.modules.compute_features,
             self.modules.mean_var_norm,
             self.modules.embedding_model,
-            self.modules.classifier,
+            self.modules.classifier_src,
+            self.modules.classifier_tgt,
         ]:
             for p in module.parameters():
-                p.requires_grad = True
+                p.requires_grad = grad
 
-        if stage == sb.Stage.VALID:
-            self.error_metrics = self.hparams.error_stats()
-
-    def on_stage_end(self, stage, stage_loss, epoch=None):
+    def on_stage_end(self, stage: sb.Stage, stage_loss, epoch: int):
         """Gets called at the end of an epoch."""
         stage_stats = {"loss": stage_loss}
         if stage == sb.Stage.TRAIN:
             self.train_stats = stage_stats
         elif stage == sb.Stage.VALID:
-            stage_stats["ErrorRate"] = self.error_metrics.summarize("average")
+            stage_stats["error_rate_src"] = self.error_metrics_src.summarize("average")
+            stage_stats["error_rate_tgt"] = self.error_metrics_tgt.summarize("average")
             if epoch > 0:
                 old_lr, new_lr = self.hparams.lr_annealing(epoch)
                 sb.nnet.schedulers.update_learning_rate(self.optimizer, new_lr)
@@ -88,13 +143,17 @@ class SpeakerBrain(sb.core.Brain):
                 old_lr = 0.0
                 train_stats = None
             self.hparams.train_logger.log_stats(
-                stats_meta={"epoch": epoch, "lr": old_lr},
+                stats_meta={
+                    "epoch": epoch,
+                    "lr": old_lr,
+                    "tgt_weight": self.modules.classifier_tgt.weight,
+                },
                 train_stats=train_stats,
                 valid_stats=stage_stats,
             )
             self.checkpointer.save_and_keep_only(
-                meta={"ErrorRate": stage_stats["ErrorRate"]},
-                min_keys=["ErrorRate"],
+                meta={"error_rate_src": stage_stats["error_rate_src"]},
+                min_keys=["error_rate_src"],
             )
 
 
@@ -115,6 +174,8 @@ def prepare_dataset(hparams: dict, datafile: str) -> DynamicItemDataset:
         return sig
 
     sb.dataio.dataset.add_dynamic_item([data], audio_pipeline)
-    sb.dataio.dataset.set_output_keys([data], ["id", "sig", "spk_id_encoded"])
+    sb.dataio.dataset.set_output_keys(
+        [data], ["id", "sig", "source_speaker", "target_speaker"]
+    )
 
     return data

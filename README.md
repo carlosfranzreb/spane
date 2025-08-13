@@ -12,7 +12,7 @@ The script `build/framework.sh` creates a conda environment, installs the framew
 It is also the script used in the GitHub CD pipeline.
 Please use it to install the framework.
 
-Note that we expect this repository to be installed inside another one where you implement your anonymizers and run the experiments, as shown below.
+Note that we expect this repository to be installed inside a directory where you implement your anonymizers and run the experiments, as shown below.
 The build script and the tests also assume this.
 
 ### Expected structure

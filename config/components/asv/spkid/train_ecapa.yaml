@@ -16,11 +16,9 @@ val_ratio: 0.1
 # Folder to extract data augmentation files
 rir_folder: checkpoints/rirs
 
-# AL Task weighting: weight will be linearly increased (TODO: do I need this here?)
+# AL Task weighting: weight will be linearly increased
 n_epochs_zero: !PLACEHOLDER
-
 n_epochs_max: !PLACEHOLDER
-
 max_weight: !PLACEHOLDER
 
 number_of_epochs: 10

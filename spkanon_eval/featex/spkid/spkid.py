@@ -9,7 +9,6 @@ import json
 import csv
 import random
 import shutil
-import yaml
 
 from speechbrain.inference.speaker import EncoderClassifier
 from hyperpyyaml import load_hyperpyyaml

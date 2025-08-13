@@ -108,7 +108,6 @@ class ASV(EvalComponent):
 
         # fine-tune SpkId model and store the ckpt if needed
         if self.config.spkid.train:
-
             # get the number of targets from the corresponding datafile
             df_dir = os.path.dirname(datafile)
             target_df = os.path.join(df_dir, "targets.txt")

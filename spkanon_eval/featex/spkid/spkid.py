@@ -232,6 +232,6 @@ def split_spk_utts(
                     float(start),
                     float(stop),
                     spk_id,
-                    obj["target"],
+                    obj.get("target", 0),
                 ]
             )

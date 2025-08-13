@@ -18,7 +18,11 @@ val_ratio: 0.4
 # Folder to extract data augmentation files
 rir_folder: checkpoints/rirs
 
-# Training parameters
+# AL Task weighting: weight will be linearly increased
+n_epochs_zero: !PLACEHOLDER
+n_epochs_max: !PLACEHOLDER
+max_weight: !PLACEHOLDER
+
 number_of_epochs: 1
 batch_size: 2
 lr: 0.001
@@ -36,8 +40,9 @@ left_frames: 0
 right_frames: 0
 deltas: False
 
-# Number of speakers
-out_n_neurons: !PLACEHOLDER
+# Number of speakers and targets
+out_n_neurons_src: !PLACEHOLDER
+out_n_neurons_tgt: !PLACEHOLDER
 emb_dim: 512
 
 dataloader_options:
@@ -61,12 +66,19 @@ embedding_model: !new:speechbrain.lobes.models.Xvector.Xvector
   tdnn_dilations: [1, 2, 3, 1, 1]
   lin_neurons: !ref <emb_dim>
 
-classifier: !new:speechbrain.lobes.models.Xvector.Classifier
+classifier_src: !new:speechbrain.lobes.models.Xvector.Classifier
   input_shape: [null, null, !ref <emb_dim>]
   activation: !name:torch.nn.LeakyReLU
   lin_blocks: 1
   lin_neurons: !ref <emb_dim>
-  out_neurons: !ref <out_n_neurons>
+  out_neurons: !ref <out_n_neurons_src>
+
+classifier_tgt: !new:speechbrain.lobes.models.Xvector.Classifier
+  input_shape: [null, null, !ref <emb_dim>]
+  activation: !name:torch.nn.LeakyReLU
+  lin_blocks: 1
+  lin_neurons: !ref <emb_dim>
+  out_neurons: !ref <out_n_neurons_tgt>
 
 epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
   limit: !ref <number_of_epochs>
@@ -78,7 +90,8 @@ mean_var_norm: !new:speechbrain.processing.features.InputNormalization
 modules:
   compute_features: !ref <compute_features>
   embedding_model: !ref <embedding_model>
-  classifier: !ref <classifier>
+  classifier_src: !ref <classifier_src>
+  classifier_tgt: !ref <classifier_tgt>
   mean_var_norm: !ref <mean_var_norm>
 
 # Cost + optimization
@@ -106,6 +119,7 @@ checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
   checkpoints_dir: !ref <save_folder>
   recoverables:
     embedding_model: !ref <embedding_model>
-    classifier: !ref <classifier>
+    classifier_src: !ref <classifier_src>
+    classifier_tgt: !ref <classifier_tgt>
     normalizer: !ref <mean_var_norm>
     counter: !ref <epoch_counter>

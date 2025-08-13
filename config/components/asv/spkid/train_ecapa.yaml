@@ -40,6 +40,7 @@ deltas: false
 # Number of speakers and targets
 out_n_neurons_src: !PLACEHOLDER
 out_n_neurons_tgt: !PLACEHOLDER
+emb_dim: 192
 
 dataloader_options:
   batch_size: !ref <batch_size>
@@ -60,14 +61,14 @@ embedding_model: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
   dilations: [1, 2, 3, 4, 1]
   groups: [1, 1, 1, 1, 1]
   attention_channels: 128
-  lin_neurons: 192
+  lin_neurons: !ref <emb_dim>
 
 classifier_src: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
-  input_size: 192
+  input_size: !ref <emb_dim>
   out_neurons: !ref <out_n_neurons_src>
 
 classifier_tgt: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
-  input_size: 192
+  input_size: !ref <emb_dim>
   out_neurons: !ref <out_n_neurons_tgt>
 
 epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter

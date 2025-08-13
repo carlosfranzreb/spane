@@ -37,6 +37,11 @@ class TestSpkid(unittest.TestCase):
                 "emb_model_ckpt": None,
                 "num_workers": 0,
                 "train_config": "spane/config/components/asv/spkid/train_xvector_debug.yaml",
+                "al_weight": {
+                    "n_epochs_zero": 1,
+                    "n_epochs_max": 0,
+                    "max_weight": 0.0,
+                },
             }
         )
         self.data_dir = "spane/tests/data/LibriSpeech/dev-clean-2/1988/24833"
@@ -108,9 +113,10 @@ class TestSpkid(unittest.TestCase):
         os.makedirs(os.path.join(exp_folder))
         datafile = "spane/tests/datafiles/ls-dev-clean-2.txt"
         n_speakers = 3
+        n_targets = 3
         model = SpkId(self.cfg, "cpu")
         old_state_dict = copy.deepcopy(model.model.state_dict())
-        model.train(exp_folder, datafile, n_speakers)
+        model.train(exp_folder, datafile, n_speakers, n_targets)
 
         # gather the utterances from the datafile
         expected_samples = dict()

@@ -15,7 +15,7 @@ from hyperpyyaml import load_hyperpyyaml
 from omegaconf import OmegaConf
 import torch
 
-from spkanon_eval.featex.spkid.train import SpeakerBrain, prepare_dataset
+from .train import SpeakerBrain, prepare_dataset
 from spkanon_eval.component_definitions import InferComponent
 
 
@@ -34,7 +34,9 @@ class SpkId(InferComponent):
         )
         if config.get("ckpt", None) is not None:
             LOGGER.info(f"Loading emb. model from {config.ckpt}")
-            state_dict = torch.load(config.ckpt, map_location=device)
+            state_dict = torch.load(
+                config.ckpt, map_location=device, weights_only=False
+            )
             self.model.mods.embedding_model.load_state_dict(state_dict)
         self.model.eval()
 
@@ -61,7 +63,9 @@ class SpkId(InferComponent):
             batch[0].to(self.device), batch[2].to(self.device), True
         ).squeeze(1)
 
-    def train(self, dump_dir: str, datafile: str, n_speakers: int) -> None:
+    def train(
+        self, dump_dir: str, datafile: str, n_sources: int, n_targets: int
+    ) -> None:
         """
         Train this model with the given datafiles. No checkpoint will be used as a
         starting point.
@@ -69,8 +73,10 @@ class SpkId(InferComponent):
         Args:
             dump_dir: Path to the folder where the model and datafiles will be saved.
             datafile: paths to the datafile used for training.
-            n_speakers: Number of speakers across all datafiles, used to initialize
-                the classifier.
+            n_sources: Number of source speakers across all datafiles, used to
+                initialize the source classifier.
+            n_targets: Number of target speakers across all datafiles, used to
+                initialize the target classifier.
         """
         LOGGER.info(f"Training the spkid model with datafile {datafile}")
         os.makedirs(dump_dir, exist_ok=True)
@@ -78,13 +84,18 @@ class SpkId(InferComponent):
             self.config.train_config, os.path.join(dump_dir, "train_config.yaml")
         )
 
+        # prepare the config
         with open(self.config.train_config) as f:
             hparams = load_hyperpyyaml(
                 f,
                 overrides={
                     "output_folder": dump_dir,
-                    "out_n_neurons": n_speakers,
+                    "out_n_neurons_src": n_sources,
+                    "out_n_neurons_tgt": n_targets,
                     "num_workers": self.config.num_workers,
+                    "n_epochs_zero": self.config.al_weight.n_epochs_zero,
+                    "n_epochs_max": self.config.al_weight.n_epochs_max,
+                    "max_weight": self.config.al_weight.max_weight,
                 },
             )
 
@@ -101,7 +112,15 @@ class SpkId(InferComponent):
                 quoting=csv.QUOTE_MINIMAL,
             )
             splits[split]["csv_writer"].writerow(
-                ["ID", "wav", "duration", "start", "stop", "spk_id", "spk_id_encoded"]
+                [
+                    "ID",
+                    "wav",
+                    "duration",
+                    "start",
+                    "stop",
+                    "source_speaker",
+                    "target_speaker",
+                ]
             )
 
         # split the data of each speaker into training and validation sets
@@ -112,7 +131,7 @@ class SpkId(InferComponent):
             if spk not in speaker_objs:
                 speaker_objs[spk] = list()
             speaker_objs[spk].append(obj)
-        
+
         for spk_id, spk_objs in speaker_objs.items():
             split_spk_utts(
                 spk_objs,
@@ -140,6 +159,26 @@ class SpkId(InferComponent):
         speaker_brain.epoch_losses = {"TRAIN": [], "VALID": []}
         val_kwargs = hparams["dataloader_options"].copy()
         val_kwargs["shuffle"] = False
+
+        # set the adversary weight for each epoch based on the config
+        n_epochs = hparams["number_of_epochs"]
+        n_epochs_max = hparams["n_epochs_max"]
+        n_epochs_zero = hparams["n_epochs_zero"]
+        max_weight = hparams["max_weight"]
+        increasing_weights = torch.linspace(
+            0, max_weight, n_epochs - n_epochs_max - n_epochs_zero + 2
+        )[1:]
+
+        speaker_brain.al_weights = list()
+        for epoch in range(n_epochs):
+            if epoch < n_epochs_zero:
+                speaker_brain.al_weights.append(0.0)
+            elif epoch > n_epochs - n_epochs_max:
+                speaker_brain.al_weights.append(max_weight)
+            else:
+                speaker_brain.al_weights.append(
+                    increasing_weights[epoch - n_epochs_zero].item()
+                )
 
         speaker_brain.fit(
             speaker_brain.hparams.epoch_counter,
@@ -191,7 +230,7 @@ def split_spk_utts(
                     obj["duration"],
                     float(start),
                     float(stop),
-                    obj["label"],
                     spk_id,
+                    obj.get("target", 0),
                 ]
             )

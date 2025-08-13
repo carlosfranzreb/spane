@@ -5,3 +5,7 @@ spkid:
   train: ${eval.components.asv.train_spkid}
   num_workers: ${data.config.num_workers}
   train_config: spane/config/components/asv/spkid/train_ecapa.yaml
+  al_weight:
+    n_epochs_zero: 10
+    n_epochs_max: 0
+    max_weight: 0.0

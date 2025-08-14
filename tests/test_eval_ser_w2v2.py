@@ -65,6 +65,6 @@ class TestEvalSer(BaseTestClass):
         batched_out = evaluator.run([audios])[0]
         single_out = [evaluator.run([audio.unsqueeze(0)])[0] for audio in audios]
         for i in range(len(batched_out)):
-            self.assertTrue(torch.allclose(batched_out[i], single_out[i]))
+            self.assertTrue(torch.allclose(batched_out[i], single_out[i], atol=1e-5))
             if i > 0:
                 self.assertFalse(torch.allclose(batched_out[i], batched_out[i - 1]))

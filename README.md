@@ -29,14 +29,59 @@ my_repo/
     ...
 ```
 
-## Full results of the SPSC 2023 paper
+## Paper results
 
-The results that were used on the aforementioned paper can be found on a previous commit of this repository. We have removed them from the current version to simplify the repository. Here is a link under which the results can be found: <https://github.com/carlosfranzreb/spkanon_eval/tree/28f27eb>. The notebooks summarizing the results are under `scripts`.
+Here are links to the results of the papers I've written using the framework.
+
+### SPSC 2023: A Comprehensive Evaluation Framework for Speaker Anonymization Systems
+
+```tex
+@inproceedings{franzreb2023comprehensive,
+  title={A Comprehensive Evaluation Framework for Speaker Anonymization Systems},
+  author={Franzreb, Carlos and Polzehl, Tim and Moeller, Sebastian},
+  booktitle={Proc. 3rd Symposium on Security and Privacy in Speech Communication},
+  year={2023},
+}
+```
+
+Introduces the framework, including the utility evaluation with pre-trained models and the use of the [EdAcc](https://groups.inf.ed.ac.uk/edacc/) for the privacy evaluation. 
+I have removed them from the current version to simplify the repository.
+Here is the [commit under which the results can be found](https://github.com/carlosfranzreb/spkanon_eval/tree/28f27eb).
+The notebooks summarizing the results are under `scripts`.
+
+### SPSC 2025: Optimizing the Dataset for the Privacy Evaluation of Speaker Anonymizers
+
+Introduces the Librispeech training and evaluation datasets, after experimenting with different configurations.
+The results are published as a [release of this repository](https://github.com/carlosfranzreb/spane/releases/tag/paper_results).
+
+### Interspeech 2025: Private kNN-VC: Interpretable Anonymization of Converted Speech
+
+```tex
+@inproceedings{franzreb25_interspeech,
+  title     = {{Private kNN-VC: Interpretable Anonymization of Converted Speech}},
+  author    = {{Carlos Franzreb and Arnab Das and Tim Polzehl and Sebastian Möller}},
+  year      = {{2025}},
+  booktitle = {{Interspeech 2025}},
+  pages     = {{3224--3228}},
+  doi       = {{10.21437/Interspeech.2025-820}},
+}
+```
+
+This anonymizer was run with SpAnE and evaluated with the [VPC 2024 framework](https://github.com/Voice-Privacy-Challenge/Voice-Privacy-Challenge-2024/tree/main).
+The results, a self-contained demo and some samples can be found as [a separate repository](https://github.com/carlosfranzreb/private_knnvc).
+Private kNN-VC is also part of the [spkanon_models repository](https://github.com/carlosfranzreb/spkanon_models).
+
+### Pre-print: Improving the Speaker Anonymization Evaluation's Robustness to Target Speakers with Adversarial Learning
+
+[Link to pre-print](https://www.arxiv.org/abs/2508.09803).
+
+Note that this work has not been reviewed yet.
+The results are published as a [release of this repository](https://github.com/carlosfranzreb/spane/releases/tag/paper_results_2).
 
 ## Existing anonymizers
 
-We have moved the anonymization models to a separate repository, as well as the build scripts required for them.
-You can find the components, build instructions and evaluation results in the `spkanon_models` repository: <https://github.com/carlosfranzreb/spkanon_models>.
+We have moved the anonymizers to a separate repository, as well as the build scripts required for them.
+You can find the components, build instructions and evaluation results in the [spkanon_models repository](https://github.com/carlosfranzreb/spkanon_models).
 
 ## Evaluate your anonymizer
 
@@ -48,6 +93,12 @@ The `infer` method should anonymize and unpad batches.
 See `featex_eval.anonymizer.Anonymizer.infer` to learn how we do it.
 
 ## Citation
+
+For the framework (SPSC 2023):
+
+
+
+For the framework (SPSC 2023):
 
 ```tex
 @inproceedings{franzreb2023comprehensive,

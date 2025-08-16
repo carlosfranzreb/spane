@@ -90,21 +90,5 @@ Read about them in the [component documentation](docs/components.md).
 
 Alternatively, you can define an `infer` method on your model and replace the current model in the `spkanon_eval/main.py` file.
 The `infer` method should anonymize and unpad batches.
-See `featex_eval.anonymizer.Anonymizer.infer` to learn how we do it.
+See `spane.anonymizer.Anonymizer.infer` to learn how we do it.
 
-## Citation
-
-For the framework (SPSC 2023):
-
-
-
-For the framework (SPSC 2023):
-
-```tex
-@inproceedings{franzreb2023comprehensive,
-  title={A Comprehensive Evaluation Framework for Speaker Anonymization Systems},
-  author={Franzreb, Carlos and Polzehl, Tim and Moeller, Sebastian},
-  booktitle={Proc. 3rd Symposium on Security and Privacy in Speech Communication},
-  year={2023},
-}
-```

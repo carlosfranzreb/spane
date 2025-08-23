@@ -4,7 +4,7 @@ log_dir: logs/knnvc_private
 device: cpu # overwritten on runtime
 
 inference:
-  run: true # store anonymized utterances; can be true, false or a path to an exp folder
+  run: true # anonymize utterances
   input: # input of the `infer` method of the anonymizer
     spectrogram: spectrogram # key under which the spectrogram can be found
     target: target
@@ -20,7 +20,7 @@ converter_params:
   phone_lexicon: spane/spkanon_models/knnvc_private/phone_lexicon.txt
   n_anonymizations: 1
 
-eval: # calls func `eval_dir` of each component, passing exp_folder and config
+eval: # calls func `eval_dir` of each component
   config:
     seed: 300
     baseline: false # non-anonymized speech is evaluated; inference and train must be false, eval must be present

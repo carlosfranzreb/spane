@@ -14,6 +14,7 @@ Please use it to install the framework.
 
 Note that we expect this repository to be installed inside a directory where you implement your anonymizers and run the experiments, as shown below.
 The build script and the tests also assume this.
+Check out this [guide for getting started](https://carlosfranzreb.github.io/spane-guide#privacy-evaluation).
 
 ### Expected structure
 

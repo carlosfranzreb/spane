@@ -4,7 +4,9 @@ log_dir: logs/knnvc_private
 device: cpu # overwritten on runtime
 
 inference:
-  run: true # anonymize utterances
+  run: false # store anonymized utterances; can be true, false or a path to an exp folder
+  consistent_targets: false
+  gender_conversion: null # same, opposite, or null
   input: # input of the `infer` method of the anonymizer
     spectrogram: spectrogram # key under which the spectrogram can be found
     target: target

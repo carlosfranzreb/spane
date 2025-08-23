@@ -1,6 +1,14 @@
 #! /bin/bash
 # Runs tests with coverage check
 # This script should be called from the parent folder of the repository
+
+ORIGINAL_CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES
+cleanup() {
+    export CUDA_VISIBLE_DEVICES=$ORIGINAL_CUDA_VISIBLE_DEVICES
+}
+trap cleanup EXIT
+
+export CUDA_VISIBLE_DEVICES=""
 coverage run --omit=./spane/NISQA/*,./spane/spkanon_eval/featex/wavlm/modules.py,./spane/spkanon_eval/featex/wavlm/wavlm_model.py -m unittest discover -s spane/tests -p "test_*.py"
 
 if [ $? -eq 1 ]; then

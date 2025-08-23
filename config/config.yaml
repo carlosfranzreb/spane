@@ -4,7 +4,7 @@ log_dir: logs/knnvc_private
 device: cpu # overwritten on runtime
 
 inference:
-  run: false # store anonymized utterances; can be true, false or a path to an exp folder
+  run: true # store anonymized utterances; can be true, false or a path to an exp folder
   input: # input of the `infer` method of the anonymizer
     spectrogram: spectrogram # key under which the spectrogram can be found
     target: target
@@ -12,7 +12,7 @@ inference:
 target_selection_cfg: spane/config/components/target_selection/random.yaml
 pipeline_cfg: spane/spkanon_models/knnvc_private/config.yaml # must clone spkanon_models repo first (see README)
 converter_params:
-  target_feats: logs/knnvc_private/1755243344/target_feats
+  target_feats: null
   duration_prediction_weight: 0.7
   n_phone_clusters: 8
   phone_predictor_ckpt: checkpoints/phone_decoder.pt

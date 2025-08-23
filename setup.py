@@ -1,9 +1,9 @@
 from setuptools import find_packages, setup
 
 
-NAME = "spkanon_eval"
+NAME = "spane"
 DESCRIPTION = "Speaker anonymization Evaluation (SpAnE)"
-URL = "https://github.com/carlosfranzreb/spkanon_eval"
+URL = "https://github.com/carlosfranzreb/spane"
 EMAIL = "carlos.franzreb@dfki.de"
 AUTHOR = "Carlos Franzreb"
 REQUIRES_PYTHON = ">=3.10.0"

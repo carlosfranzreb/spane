@@ -207,7 +207,8 @@ class ASV(EvalComponent):
             anonymized_enrolls,
             root_dir,
             anon_folder,
-            self.config.data.datasets.get("enrolls", None),
+            self.config.data.datasets.asv.trials,
+            self.config.data.datasets.asv.enrolls,
         )
 
         # if the f_trials or f_enrolls do not exist, skip the evaluation

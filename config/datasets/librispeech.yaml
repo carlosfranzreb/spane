@@ -11,4 +11,4 @@ data:
       trials:
         - spane/data/librispeech/privacy_eval/ls-test-clean_trials.txt
       enrolls:
-        - spane/data/librispeech/privacy_eval/ls-test-clean_trials.txt
+        - spane/data/librispeech/privacy_eval/ls-test-clean_enrolls.txt

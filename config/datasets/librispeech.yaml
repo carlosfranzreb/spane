@@ -6,7 +6,7 @@ data:
     train_eval:
       - spane/data/librispeech/ls-train-clean-360.txt
     targets:
-      - spane/data/librispeech/ls-train-clean-100.txt
+      - spkanon/spane/data/libritts/tts-train-other-500_subset.txt
     asv:
       trials:
         - spane/data/librispeech/privacy_eval/ls-test-clean_trials.txt

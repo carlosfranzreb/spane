@@ -46,7 +46,7 @@ def split_trials_enrolls(
             the original path with the anonymized one.
             If we are computing a baseline with original data, this is null.
         anon_folder (optional): folder where the anonymized evaluation data is stored.
-            It it is not given, we assume that it is the same as the experiment folder.
+            If it is not given, we assume that it is the same as the experiment folder.
         trials, enrolls (optional): list of files defining the enrollment data. Each of
             these files contains one filename per line.
 
@@ -81,7 +81,7 @@ def split_trials_enrolls(
         not anon_folder or not root_folder
     ):
         raise ValueError(
-            "`anon_folder` and `anon_folder` are needed to find the anonymized path"
+            "`root_folder` and `anon_folder` are needed to find the anonymized path"
         )
 
     # create the file writers and define which data is anonymized
@@ -98,26 +98,41 @@ def split_trials_enrolls(
         if split_files is not None:
             for f in split_files:
                 fnames[split].extend([line.strip() for line in open(f)])
+    
+    # if anonymized trials or enrolls are required, gather their durations
+    anon_durations = dict()
+    anon_datafile = os.path.join(exp_folder, "data", "anon_eval.txt")
+    for line in open(anon_datafile):
+        obj = json.loads(line)
+        fname = os.path.splitext(os.path.basename(obj["path"]))[0]
+        anon_durations[fname] = obj["duration"]
 
     both_passed = trials is not None and enrolls is not None
     one_passed = trials is not None or enrolls is not None
 
-    def write_line(split: str, line: str):
+    def write_line(split: str, line: str, fname: str = None):
         """
         Write the line to the given split. If the split should be anonymized, the
-        original path is replaced with the anonymized one.
+        original path is replaced with the anonymized one, and the anonymized
+        duration is used.
 
         Args:
             split: the split to which the line should be written (trials or enrolls).
             line: the original line from the datafile that should be dumped.
+            fname: the filename, to get the anonymized duration when needed. If it is
+                not passed but needed, it is computed here.
         """
 
-        # replace the original path with the anonymized ones if needed
+        # replace the original path with the anonymized one if needed
         if is_anonymized[split]:
             obj = json.loads(line)
+
             obj["path"] = obj["path"].replace(
                 root_folder, os.path.join(anon_folder, "results", "eval")
             )
+            if fname is None:
+                fname = os.path.splitext(os.path.basename(obj["path"]))[0]
+            obj["duration"] = anon_durations[fname]
             line = json.dumps(obj) + "\n"
 
         writers[split].write(line)
@@ -137,7 +152,7 @@ def split_trials_enrolls(
             is_written = False
             for split in splits:
                 if fname in fnames[split]:
-                    write_line(split, line)
+                    write_line(split, line, fname)
                     is_written = True
 
             if is_written or both_passed:
@@ -146,7 +161,7 @@ def split_trials_enrolls(
             # if only one list was passed, add this line to the other
             for split in splits:
                 if len(fnames[split]) == 0:
-                    write_line(split, line)
+                    write_line(split, line, fname)
 
     # trials and enrolls are both null: split data of each speaker randomly 50/50
     else:
@@ -176,8 +191,7 @@ def split_trials_enrolls(
         writer.close()
 
     # sort the files according to their duration
-    if not both_passed and not one_passed:
-        sort_datafile(f_trials)
-        sort_datafile(f_enrolls)
+    sort_datafile(f_trials)
+    sort_datafile(f_enrolls)
 
     return f_trials, f_enrolls

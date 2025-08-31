@@ -43,7 +43,7 @@ def evaluate(exp_folder: str, model: Anonymizer, config: DictConfig) -> None:
 
         if cfg.train is True:
             LOGGER.info(f"Training component `{name}`")
-            component.train(exp_folder)
+            component.train(exp_folder, is_baseline)
 
         LOGGER.info(f"Running evaluation with component `{name}`")
         component.eval_dir(exp_folder, datafile, is_baseline)

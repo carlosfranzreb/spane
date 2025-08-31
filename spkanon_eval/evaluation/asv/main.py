@@ -86,7 +86,7 @@ class ASV(EvalComponent):
             else:
                 LOGGER.warning("`train_mean_spkemb` is null in the config.")
 
-    def train(self, exp_folder: str) -> None:
+    def train(self, exp_folder: str, is_baseline: bool) -> None:
         """
         Train the PLDA model with the SpkId vectors and also the SpkId model.
         The anonymized samples are stored in the given path `exp_folder`.
@@ -102,7 +102,7 @@ class ASV(EvalComponent):
         os.makedirs(dump_dir, exist_ok=True)
 
         # If the scenario is "semi-informed", anonymize the training data
-        if self.config.scenario == "semi-informed":
+        if self.config.scenario == "semi-informed" and not is_baseline:
             LOGGER.info(f"Anonymizing training data: {datafile}")
             datafile = self.anonymize_data(exp_folder, "train_eval", False)
 
@@ -112,7 +112,7 @@ class ASV(EvalComponent):
             df_dir = os.path.dirname(datafile)
             target_df = os.path.join(df_dir, "targets.txt")
             if not os.path.exists(target_df):
-                n_targets = 1
+                n_targets = 20
             else:
                 n_targets = count_speakers(target_df)
 
@@ -201,7 +201,7 @@ class ASV(EvalComponent):
         # split the datafile into trial and enrollment datafiles
         root_dir = None if is_baseline else self.config.data.config.root_folder
         anon_folder = self.config.data.config.get("anon_folder", None)
-        anonymized_enrolls = self.config.consistent_targets is False
+        anonymized_enrolls = self.config.consistent_targets is False and not is_baseline
         f_trials, f_enrolls = split_trials_enrolls(
             exp_folder,
             anonymized_enrolls,
@@ -217,7 +217,7 @@ class ASV(EvalComponent):
             return
 
         # Anonymize enrollment data if necessary
-        if self.config.scenario == "semi-informed" and not anonymized_enrolls:
+        if self.config.scenario == "semi-informed" and not anonymized_enrolls and not is_baseline:
             LOGGER.info("Anonymizing enrollment data of the ASV system")
             f_enrolls = self.anonymize_data(exp_folder, "eval_enrolls", False)
 

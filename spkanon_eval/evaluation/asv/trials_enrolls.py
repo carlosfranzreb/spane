@@ -101,11 +101,12 @@ def split_trials_enrolls(
     
     # if anonymized trials or enrolls are required, gather their durations
     anon_durations = dict()
-    anon_datafile = os.path.join(exp_folder, "data", "anon_eval.txt")
-    for line in open(anon_datafile):
-        obj = json.loads(line)
-        fname = os.path.splitext(os.path.basename(obj["path"]))[0]
-        anon_durations[fname] = obj["duration"]
+    if is_anonymized["trials"] or is_anonymized["enrolls"]:
+        anon_datafile = os.path.join(exp_folder, "data", "anon_eval.txt")
+        for line in open(anon_datafile):
+            obj = json.loads(line)
+            fname = os.path.splitext(os.path.basename(obj["path"]))[0]
+            anon_durations[fname] = obj["duration"]
 
     both_passed = trials is not None and enrolls is not None
     one_passed = trials is not None or enrolls is not None

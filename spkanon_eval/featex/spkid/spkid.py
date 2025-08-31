@@ -145,7 +145,7 @@ class SpkId(InferComponent):
         for split in splits:
             splits[split]["writer"].close()
 
-        # train the model
+        # initialize the model
         train_data = prepare_dataset(hparams, splits["train"]["file"])
         val_data = prepare_dataset(hparams, splits["val"]["file"])
         speaker_brain = SpeakerBrain(
@@ -155,6 +155,14 @@ class SpkId(InferComponent):
             run_opts={"device": self.device},
             checkpointer=hparams["checkpointer"],
         )
+
+        # if a ckpt is given, it should be fine-tuned
+        if self.config.get("ckpt", None) is not None:
+            LOGGER.info(f"Fine-tuning emb. model {self.config.ckpt}")
+            state_dict = torch.load(
+                self.config.ckpt, map_location=self.device, weights_only=False
+            )
+            speaker_brain.hparams.embedding_model.load_state_dict(state_dict)
 
         speaker_brain.epoch_losses = {"TRAIN": [], "VALID": []}
         val_kwargs = hparams["dataloader_options"].copy()

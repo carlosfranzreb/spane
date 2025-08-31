@@ -98,7 +98,7 @@ def split_trials_enrolls(
         if split_files is not None:
             for f in split_files:
                 fnames[split].extend([line.strip() for line in open(f)])
-    
+
     # if anonymized trials or enrolls are required, gather their durations
     anon_durations = dict()
     if is_anonymized["trials"] or is_anonymized["enrolls"]:

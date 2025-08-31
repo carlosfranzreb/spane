@@ -100,19 +100,14 @@ def get_characteristics(datafile: str) -> tuple[dict, list, list]:
     """
 
     chars = dict()  # maps each char value to the speaker or utterance indices
-    speakers_idx = list()  # maps each utterance to its speaker index in `speakers`
     speakers = list()  # stores the speaker IDs
 
     with open(datafile) as f:
         for utt_idx, line in enumerate(f):
             # parse the line and get the speaker and utterance IDs
             obj = json.loads(line)
-            if obj["label"] in speakers:
-                spk_idx = speakers.index(obj["label"])
-            else:
-                spk_idx = len(speakers)
-                speakers.append(obj["label"])
-            speakers_idx.append(spk_idx)
+            spk_id = obj["speaker_id"]
+            speakers.append(spk_id)
 
             # iterate over the chars in this object
             for key, value in obj.items():
@@ -121,7 +116,7 @@ def get_characteristics(datafile: str) -> tuple[dict, list, list]:
                     continue
 
                 # pick an index depending on the characteristic (utt or spk)
-                idx = utt_idx if key.startswith("utt_") else spk_idx
+                idx = utt_idx if key.startswith("utt_") else spk_id
                 new_arr = np.array([idx])
 
                 # store the char value in the dictionary
@@ -132,4 +127,4 @@ def get_characteristics(datafile: str) -> tuple[dict, list, list]:
                 elif idx not in chars[key][value]:
                     chars[key][value] = np.concatenate((chars[key][value], new_arr))
 
-    return chars, speakers_idx
+    return chars, speakers

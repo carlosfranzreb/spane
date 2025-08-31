@@ -50,21 +50,22 @@ class TestEvalASV(BaseTestClass):
         self.init_config.log_dir = os.path.join(self.init_config.log_dir, "asv_test")
         config = run_pipeline(self.init_config)
 
-        # assert that 3 files were created
+        # assert that 7 files were created:
+        #   eer, eer_gender_intra, eer_gender_inter, eer_target_intra, eer_target_inter
+        #   eer_speaker, spk_identifiability
         results_subdir = "eval/asv-plda/ignorant/results"
         results_dir = os.path.join(config.exp_folder, results_subdir)
         results_files = [f for f in os.listdir(results_dir) if f.endswith(".txt")]
-        self.assertEqual(len(results_files), 3)
+        self.assertEqual(len(results_files), 7)
 
         # check the overall results
         with open(os.path.join(results_dir, "eer.txt")) as f:
             lines = f.readlines()
             self.assertEqual(len(lines), 2)
             out = lines[1].strip().split()
-            self.assertEqual(out[0], "anon_eval")
-            self.assertEqual(int(out[1]), 12)
-            self.assertTrue(isinstance(float(out[2]), float))
-            self.assertTrue(0 <= float(out[3]) <= 1)
+            self.assertEqual(int(out[0]), 12)
+            self.assertTrue(isinstance(float(out[1]), float))
+            self.assertTrue(0 <= float(out[2]) <= 1)
 
     def test_pca_reduction(self):
         """

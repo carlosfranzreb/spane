@@ -194,8 +194,7 @@ class ASV(EvalComponent):
         dump_folder = os.path.join(
             exp_folder, "eval", self.component_name, self.config.scenario
         )
-        fname = os.path.splitext(os.path.basename(datafile))[0]
-        dump_subfolder = os.path.join(dump_folder, "results", fname)
+        dump_subfolder = os.path.join(dump_folder, "results")
         os.makedirs(dump_subfolder, exist_ok=True)
 
         # split the datafile into trial and enrollment datafiles
@@ -217,7 +216,11 @@ class ASV(EvalComponent):
             return
 
         # Anonymize enrollment data if necessary
-        if self.config.scenario == "semi-informed" and not anonymized_enrolls and not is_baseline:
+        if (
+            self.config.scenario == "semi-informed"
+            and not anonymized_enrolls
+            and not is_baseline
+        ):
             LOGGER.info("Anonymizing enrollment data of the ASV system")
             f_enrolls = self.anonymize_data(exp_folder, "eval_enrolls", False)
 

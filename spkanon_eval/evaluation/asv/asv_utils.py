@@ -54,31 +54,55 @@ def compute_eer(
     return fpr, tpr, thresholds, key
 
 
-def analyse_results(datafile: str, llr_file: str) -> None:
+def get_eer_and_t(
+    fpr: np.ndarray,
+    tpr: np.ndarray,
+    thresholds: np.ndarray,
+    key: int,
+) -> tuple[float, float]:
+    """Compute the EER and its threshold from the output of `compute_eer`."""
+    eer = np.round((fpr[key] + (1 - tpr[key])) / 2, 3)
+    t = np.round(thresholds[key], 3)
+    return eer, t
+
+
+def analyse_results(datafile: str, score_file: str) -> None:
     """
     Compute and dump the EER and ROC curve for the whole dataset and each of its
-    subsets w.r.t speaker characteristics present in the file (age, gender, etc.).
+    subsets w.r.t metadata present in the datafile. It can characterize the speaker
+    (e.g. age, gender), the utterance (e.g. emotion) or the anonymization (e.g.
+    target). For each metadata, we run the privacy evaluation twice. Each run is
+    identified by the suffix on the resulting file.
+
+    1. "_intra": only considering the utterances that have the same value.
+    2. "_inter": the value is used to filter only trials; all enrolls are used.
+
+    We also characterize the "identifiability" of each source speaker by subtracting
+    its avg. different-speaker score from its avg. same-speaker score. A higher score
+    means that the speaker is easy to identify. These scores are dumped to a file
+    called `spk_identifiability.txt`. The EER is not enough here, because it does not
+    quantify how far apart the two distributions are; if they are separable, the EER
+    is zero, no matter by how much. But we also compute it, and store it under
+    `eer_speaker.txt`.
     """
     LOGGER.info(f"Analysing ASV results for {datafile}")
-    # get the filename of the datafile
-    fname = os.path.splitext(os.path.basename(datafile))[0]
-    # get the dump folder for this datafile (the LLR file's folder)
-    dump_folder = os.path.dirname(llr_file)
-    # read the llr file and extract the source & target speakers and the llrs
-    trials, enrolls, llrs = np.hsplit(np.load(llr_file), 3)
+    dump_folder = os.path.dirname(score_file)
+    trials, enrolls, scores = [
+        arr.squeeze() for arr in np.vsplit(np.load(score_file).T, 3)
+    ]
 
     # compute the EER of the whole dataset and dump the ROC curve
     LOGGER.info("Computing EER of the whole dataset and dumping ROC curve")
-    fpr, tpr, thresholds, key = compute_eer(trials, enrolls, llrs)
+    fpr, tpr, thresholds, key = compute_eer(trials, enrolls, scores)
     # create the eer file with the headers if it doesn't exist yet
-    eer_file = os.path.join(os.path.dirname(dump_folder), "eer.txt")
+    eer_file = os.path.join(dump_folder, "eer.txt")
     if not os.path.exists(eer_file):
         with open(eer_file, "w") as f:
-            f.write("dataset n_pairs threshold eer\n")
+            f.write("n_pairs threshold eer\n")
     # dump the EER and the threshold to the eer file
-    eer = (fpr[key] + (1 - tpr[key])) / 2
+    eer, t = get_eer_and_t(fpr, tpr, thresholds, key)
     with open(eer_file, "a") as f:
-        f.write(f"{fname} {llrs.size} {thresholds[key]} {eer}\n")
+        f.write(f"{scores.size} {t} {eer}\n")
     # dump the ROC curve
     RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
     plt.savefig(os.path.join(dump_folder, "roc_curve.png"))
@@ -90,25 +114,66 @@ def analyse_results(datafile: str, llr_file: str) -> None:
     for key, values in speaker_chars.items():
         LOGGER.info(f"Computing EER for all values of {key}")
         for value in values:
-            # get the indices of the rows that contain the values
-            indices = np.where(
-                np.logical_and(
-                    np.isin(trials, values[value]), np.isin(enrolls, values[value])
+            for suffix in ["intra", "inter"]:
+
+                # get the indices depending on the variability suffix
+                if suffix == "intra":
+                    indices = np.where(
+                        np.logical_and(
+                            np.isin(trials, values[value]),
+                            np.isin(enrolls, values[value]),
+                        )
+                    )[0]
+                else:
+                    indices = np.where(np.isin(trials, values[value]))[0]
+
+                # compute the EER; continue if it couldn't be computed
+                fpr, tpr, thresholds, eer_key = compute_eer(
+                    trials[indices], enrolls[indices], scores[indices]
                 )
-            )[0]
-            # compute the EER and dump it to the dump file if it was computed
-            fpr, tpr, thresholds, eer_key = compute_eer(
-                trials[indices], enrolls[indices], llrs[indices]
-            )
-            if eer_key >= 0:
-                dump_file = os.path.join(os.path.dirname(dump_folder), f"eer_{key}.txt")
-                eer = (fpr[eer_key] + (1 - tpr[eer_key])) / 2
+                if eer_key == -1:
+                    continue
+
+                # dump the EER on the char.'s file
+                dump_file = os.path.join(dump_folder, f"eer_{key}_{suffix}.txt")
+                eer, t = get_eer_and_t(fpr, tpr, thresholds, eer_key)
                 if not os.path.exists(dump_file):
                     with open(dump_file, "w") as f:
-                        f.write(f"dataset {key} n_pairs threshold eer\n")
+                        f.write(f"{key} n_pairs threshold eer\n")
                 with open(dump_file, "a") as f:
-                    f.write(f"{fname} {value} {indices.size} ")
-                    f.write(f"{thresholds[eer_key]} {eer}\n")
+                    f.write(f"{value} {indices.size} {t} {eer}\n")
+
+    # compute the identifiability scores and EERS of the speakers
+    dump_file_scores = os.path.join(dump_folder, f"spk_identifiability.txt")
+    with open(dump_file_scores, "w") as f:
+        f.write(f"speaker_id n_pairs_same n_pairs_diff identifiability_score\n")
+
+    dump_file_eers = os.path.join(dump_folder, f"eer_speaker.txt")
+    with open(dump_file_eers, "w") as f:
+        f.write(f"speaker_id n_pairs threshold eer\n")
+
+    for spk in np.unique(trials):
+        indices = np.where(trials == spk)[0]
+
+        # compute the eer
+        fpr, tpr, thresholds, eer_key = compute_eer(
+            trials[indices], enrolls[indices], scores[indices]
+        )
+        eer, t = get_eer_and_t(fpr, tpr, thresholds, eer_key)
+        with open(dump_file_eers, "a") as f:
+            f.write(f"{spk} {indices.shape[0]} {t} {eer}\n")
+
+        # compute the identifiability score
+        same_speaker = trials[indices] == enrolls[indices]
+        spk_score = np.round(
+            scores[indices][same_speaker].mean()
+            - scores[indices][~same_speaker].mean(),
+            3,
+        )
+        with open(dump_file_scores, "a") as f:
+            f.write(
+                f"{spk} {np.sum(same_speaker)} {np.sum(~same_speaker)} {spk_score}\n"
+            )
 
 
 def compute_llrs(

@@ -52,13 +52,28 @@ class TestEvalSer(BaseTestClass):
         config = OmegaConf.create(
             {
                 "init": "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim",
-                "batch_size": 2,
-                "data": {
-                    "config": {
-                        "trainer": {"batch_size": 2},
-                        "sample_rate": 16000,
-                    },
-                },
+                "data": {"config": {"sample_rate": 16000}},
+            }
+        )
+        evaluator = EmotionEvaluator(config, "cpu")
+        batched_out = evaluator.run([audios])[0]
+        single_out = [evaluator.run([audio.unsqueeze(0)])[0] for audio in audios]
+        for i in range(len(batched_out)):
+            self.assertTrue(torch.allclose(batched_out[i], single_out[i], atol=1e-5))
+            if i > 0:
+                self.assertFalse(torch.allclose(batched_out[i], batched_out[i - 1]))
+
+    def test_resampling(self):
+        """
+        Test whether the resampling works: if the audio sampling rate differs from the
+        sampling rate expected by the emotion recognizer, the batch should be resampled
+        before being passed to the recognizer.
+        """
+        audios = torch.randn(4, 50000) - 0.5
+        config = OmegaConf.create(
+            {
+                "init": "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim",
+                "data": {"config": {"sample_rate": 16000}},
             }
         )
         evaluator = EmotionEvaluator(config, "cpu")

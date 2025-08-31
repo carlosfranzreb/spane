@@ -115,7 +115,6 @@ def analyse_results(datafile: str, score_file: str) -> None:
         LOGGER.info(f"Computing EER for all values of {key}")
         for value in values:
             for suffix in ["intra", "inter"]:
-
                 # get the indices depending on the variability suffix
                 if suffix == "intra":
                     indices = np.where(
@@ -144,13 +143,13 @@ def analyse_results(datafile: str, score_file: str) -> None:
                     f.write(f"{value} {indices.size} {t} {eer}\n")
 
     # compute the identifiability scores and EERS of the speakers
-    dump_file_scores = os.path.join(dump_folder, f"spk_identifiability.txt")
+    dump_file_scores = os.path.join(dump_folder, "spk_identifiability.txt")
     with open(dump_file_scores, "w") as f:
-        f.write(f"speaker_id n_pairs_same n_pairs_diff identifiability_score\n")
+        f.write("speaker_id n_pairs_same n_pairs_diff identifiability_score\n")
 
-    dump_file_eers = os.path.join(dump_folder, f"eer_speaker.txt")
+    dump_file_eers = os.path.join(dump_folder, "eer_speaker.txt")
     with open(dump_file_eers, "w") as f:
-        f.write(f"speaker_id n_pairs threshold eer\n")
+        f.write("speaker_id n_pairs threshold eer\n")
 
     for spk in np.unique(trials):
         indices = np.where(trials == spk)[0]

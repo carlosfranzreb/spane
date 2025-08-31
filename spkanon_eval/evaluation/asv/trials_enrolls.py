@@ -140,7 +140,6 @@ def split_trials_enrolls(
 
     # select a splitting strategy depending on whether lists are passed
     if both_passed or one_passed:
-
         for line in open(datafile):
             obj = json.loads(line.strip())
             fname = os.path.splitext(os.path.basename(obj["path"]))[0]
@@ -177,7 +176,6 @@ def split_trials_enrolls(
 
         # split the objects of each speaker
         for spk, lines in speaker_lines.items():
-
             # check that the speaker has at least two utterances
             if len(lines) < 2:
                 raise ValueError(f"Speaker with ID {spk} has less than 2 utterances")

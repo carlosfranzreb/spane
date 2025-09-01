@@ -10,7 +10,7 @@ repos:
     rev: v0.12.4
     hooks:
       - id: ruff-check
-        args: [--fix]
+        args: [--fix, --ignore, E712]
       - id: ruff-format
   - repo: local
     hooks:

@@ -111,7 +111,7 @@ class TestAsvAnalysis(unittest.TestCase):
         self.assertTrue(gender == "F")
 
         indices = np.where(
-            np.logical_and(trials_gender is False, enrolls_gender is False)
+            np.logical_and(trials_gender == False, enrolls_gender == False)
         )[0]
         eer_expected, t_expected = get_eer_and_t(self.scores[indices])
 

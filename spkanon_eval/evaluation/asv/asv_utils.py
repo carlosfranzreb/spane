@@ -153,6 +153,7 @@ def analyse_results(datafile: str, score_file: str) -> None:
 
     for spk in np.unique(trials):
         indices = np.where(trials == spk)[0]
+        spk = int(spk)
 
         # compute the eer
         fpr, tpr, thresholds, eer_key = compute_eer(

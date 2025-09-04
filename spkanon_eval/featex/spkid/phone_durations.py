@@ -10,6 +10,9 @@ alone, without any additional speaker information.
 
 ! It requires installing private kNN-VC through the spkanon_models repository:
 <https://github.com/carlosfranzreb/spkanon_models>
+
+To use it, the spkid model should be trained with config
+`spane/config/components/asv/spkid/train_ecapa_phone_durations.yaml`
 """
 
 import torch
@@ -51,12 +54,13 @@ class PhoneDurations(torch.nn.Module):
             {
                 "cls": "spkanon_eval.featex.wavlm.wrapper.WavlmWrapper",
                 "ckpt": wavlm_ckpt,
-                "layer": [24],
+                "layer": 24,
                 "hop_length": 320,
             }
         )
         self.wavlm = setup_module(wavlm_cfg, device)
 
+    @torch.inference_mode()
     @fwd_default_precision(cast_inputs=torch.float32)
     def forward(self, wav: Tensor) -> Tensor:
         """
@@ -71,7 +75,7 @@ class PhoneDurations(torch.nn.Module):
         """
         batch = [wav, None, torch.ones(wav.shape[0], dtype=torch.int) * wav.shape[1]]
         feats, feat_lengths = self.wavlm.run(batch).values()
-        phones = self.phone_predictor(feats).argmax(dim=2).cpu()
+        phones = self.phone_predictor(feats).argmax(dim=2)
 
         # compute the phone durations
         feats = list()
@@ -80,11 +84,11 @@ class PhoneDurations(torch.nn.Module):
                 phones[utt_idx], return_counts=True
             )
             utt_feats = torch.zeros(
-                (unique_phones, len(self.phone_lexicon)),
-                dtype=torch.int,
+                (unique_phones.shape[0], len(self.phone_lexicon)),
+                dtype=torch.long,
                 device=self.device,
             )
             utt_feats[torch.arange(utt_feats.shape[0]), unique_phones] = phone_durations
             feats.append(utt_feats)
 
-        return pad_sequence(feats, batch_first=True)
+        return pad_sequence(feats, batch_first=True).to(torch.float)

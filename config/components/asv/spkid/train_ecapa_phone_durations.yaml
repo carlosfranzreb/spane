@@ -32,7 +32,7 @@ sentence_len: 3.0 # seconds
 shuffle: true
 num_workers: !PLACEHOLDER
 
-n_mels: 80
+n_phones: 41
 left_frames: 0
 right_frames: 0
 deltas: false
@@ -49,12 +49,13 @@ dataloader_options:
   drop_last: true
 
 compute_features: !new:spkanon_eval.featex.PhoneDurations
+  device: cuda # this should not be needed
   phone_lexicon: spane/spkanon_models/knnvc_private/phone_lexicon.txt
   wavlm_ckpt: checkpoints/WavLM-Large.pt
   phone_predictor_ckpt: checkpoints/phone_decoder.pt
 
 embedding_model: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
-  input_size: !ref <n_mels>
+  input_size: !ref <n_phones>
   channels: [1024, 1024, 1024, 1024, 3072]
   kernel_sizes: [5, 3, 3, 3, 1]
   dilations: [1, 2, 3, 4, 1]
@@ -113,6 +114,7 @@ train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
 checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
   checkpoints_dir: !ref <save_folder>
   recoverables:
+    compute_features: !ref <compute_features>
     embedding_model: !ref <embedding_model>
     classifier_src: !ref <classifier_src>
     classifier_tgt: !ref <classifier_tgt>

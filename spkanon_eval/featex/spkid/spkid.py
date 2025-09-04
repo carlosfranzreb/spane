@@ -11,6 +11,7 @@ import random
 import shutil
 
 from speechbrain.inference.speaker import EncoderClassifier
+from speechbrain.utils.checkpoints import Checkpointer
 from hyperpyyaml import load_hyperpyyaml
 from omegaconf import OmegaConf
 import torch
@@ -24,7 +25,13 @@ LOGGER = logging.getLogger("progress")
 
 class SpkId(InferComponent):
     def __init__(self, config: OmegaConf, device: str) -> None:
-        """Initialize the model with the given config and freeze its parameters."""
+        """
+        Initialize the model with the given config and freeze its parameters.
+
+        The model is usually initialized with pre-trained weights. If a checkpoint is
+        set in the config, it will be loaded afterwards. If the input dimension to the
+        encoder is different than 80, which is the expected size of the 
+        """
         self.sample_rate = 16000
         self.config = config
         self.device = device
@@ -33,11 +40,50 @@ class SpkId(InferComponent):
             source=config.path, savedir=self.save_dir, run_opts={"device": device}
         )
         if config.get("ckpt", None) is not None:
-            LOGGER.info(f"Loading emb. model from {config.ckpt}")
-            state_dict = torch.load(
-                config.ckpt, map_location=device, weights_only=False
+            LOGGER.info(f"Loading checkpoint {config.ckpt}")
+            emb_model_ckpt = os.path.join(config.ckpt, "embedding_model.ckpt")
+            emb_model_state_dict = torch.load(
+                emb_model_ckpt, map_location=device, weights_only=False
             )
-            self.model.mods.embedding_model.load_state_dict(state_dict)
+            ckpt_dim = emb_model_state_dict["blocks.0.conv.conv.weight"].shape[1]
+            model_dim = self.model.mods.embedding_model.blocks[0].conv.in_channels
+
+            # if the shape does not fit, initialize the model with the train config
+            if ckpt_dim != model_dim:
+                with open(config.train_config) as f:
+                    hparams = load_hyperpyyaml(
+                        f,
+                        overrides={
+                            "output_folder": ".",
+                            "out_n_neurons_src": 1,
+                            "out_n_neurons_tgt": 1,
+                            "num_workers": 1,
+                            "n_epochs_zero": 1,
+                            "n_epochs_max": 1,
+                            "max_weight": 1,
+                        },
+                    )
+
+                speaker_brain = SpeakerBrain(
+                    modules=hparams["modules"],
+                    hparams=hparams,
+                    run_opts={"device": self.device},
+                )
+                self.model.mods.embedding_model = speaker_brain.modules.embedding_model
+                self.model.mods.compute_features = speaker_brain.modules.compute_features
+            
+        # load the checkpoints
+        self.model.mods.embedding_model.load_state_dict(emb_model_state_dict)
+
+        compute_features_ckpt = os.path.join(config.ckpt, "compute_features.ckpt")
+        if os.path.exists(compute_features_ckpt):
+            compute_features_state_dict = torch.load(
+                    compute_features_ckpt, map_location=device, weights_only=False
+                )
+            self.model.mods.compute_features.load_state_dict(compute_features_state_dict)
+        else:
+            LOGGER.warning("There is no `compute_features.ckpt`")
+
         self.model.eval()
 
     def to(self, device: str) -> None:
@@ -197,9 +243,10 @@ class SpkId(InferComponent):
             progressbar=True,
         )
 
-        # save the embedding model and load it
-        emb_model_state_dict = speaker_brain.modules.embedding_model.state_dict()
-        self.model.mods.embedding_model.load_state_dict(emb_model_state_dict)
+        # load the trained model
+        self.model.mods.embedding_model = speaker_brain.modules.embedding_model
+        self.model.mods.compute_features = speaker_brain.modules.compute_features
+        self.model.eval()
 
 
 def split_spk_utts(

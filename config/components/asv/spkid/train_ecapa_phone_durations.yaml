@@ -48,7 +48,8 @@ dataloader_options:
   num_workers: !ref <num_workers>
   drop_last: true
 
-compute_features: !new:spkanon_eval.featex.PhoneDurations
+compute_features:
+  !new:spkanon_models.knnvc_private.phone_durations.PhoneDurations
   device: cuda # this should not be needed
   phone_lexicon: spane/spkanon_models/knnvc_private/phone_lexicon.txt
   wavlm_ckpt: checkpoints/WavLM-Large.pt

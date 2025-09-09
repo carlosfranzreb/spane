@@ -31,19 +31,17 @@ class TestSpkid(unittest.TestCase):
         """
 
         seed_everything(42)
-        self.cfg = OmegaConf.create(
-            {
-                "path": "speechbrain/spkrec-xvect-voxceleb",
-                "emb_model_ckpt": None,
-                "num_workers": 0,
-                "train_config": "spane/config/components/asv/spkid/train_xvector_debug.yaml",
-                "al_weight": {
-                    "n_epochs_zero": 1,
-                    "n_epochs_max": 0,
-                    "max_weight": 0.0,
-                },
-            }
+        self.cfg = OmegaConf.load(
+            "spane/config/components/asv/spkid/xvector.yaml"
+        ).spkid
+        self.cfg.train_config = (
+            "spane/config/components/asv/spkid/train_xvector_debug.yaml"
         )
+        self.cfg.ckpt = None
+        self.cfg.num_workers = 0
+        self.cfg.al_weight.n_epochs_zero = 1
+        del self.cfg.train
+
         self.data_dir = "spane/tests/data/LibriSpeech/dev-clean-2/1988/24833"
 
     def get_batch(self, samples: list[str]) -> list[Tensor, Tensor, Tensor]:
@@ -104,8 +102,13 @@ class TestSpkid(unittest.TestCase):
         out = concat_model.run(batch)
         self.assertEqual(list(out.shape), expected_shape)
 
-    def test_train(self):
-        """Test that the spkid model is trained on the given datafile."""
+    def test_train_and_ckpt(self):
+        """
+        Test that the spkid model is trained on the given datafile, by ensuring that
+        the weights change.
+        Also, check that the resulting checkpoint can be used to instantiate a model,
+        both for inference and fine-tuning.
+        """
 
         exp_folder = "spane/tests/logs/spkid_train"
         if os.path.isdir(exp_folder):
@@ -137,16 +140,7 @@ class TestSpkid(unittest.TestCase):
             lines = f.readlines()
         self.assertEqual(len(lines), 1)
         new_state_dict = model.model.state_dict()
-        self.assertTrue(
-            any(
-                [
-                    not torch.equal(old, new)
-                    for old, new in zip(
-                        old_state_dict.values(), new_state_dict.values()
-                    )
-                ]
-            )
-        )
+        self.assert_different_weights(old_state_dict, new_state_dict)
 
         # check that the model is saved
         subdir = None
@@ -157,7 +151,47 @@ class TestSpkid(unittest.TestCase):
         model_file = os.path.join(exp_folder, subdir, "embedding_model.ckpt")
         self.assertTrue(os.path.isfile(model_file))
 
+        # check that the checkpoint can be used to instantiate a model
+        cfg_with_ckpt = copy.deepcopy(self.cfg)
+        cfg_with_ckpt.ckpt = os.path.dirname(model_file)
+        model_with_ckpt = SpkId(cfg_with_ckpt, "cpu")
+        model_with_ckpt_state = copy.deepcopy(model_with_ckpt.model.state_dict())
+        self.assert_different_weights(model_with_ckpt_state, old_state_dict)
+        self.assert_different_weights(
+            model_with_ckpt_state, new_state_dict, negate=True
+        )
+
+        # check that the checkpoint can be used for fine-tuning.
+        exp_folder_ft = "spane/tests/logs/spkid_finetune"
+        model_with_ckpt.train(exp_folder_ft, datafile, n_speakers, n_targets)
+        self.assert_different_weights(
+            model_with_ckpt_state, model_with_ckpt.model.state_dict()
+        )
+        self.assert_different_weights(
+            model_with_ckpt.model.state_dict(), new_state_dict
+        )
+
         shutil.rmtree(exp_folder)
+        shutil.rmtree(exp_folder_ft)
+
+    def assert_different_weights(
+        self, state_dict_a: dict, state_dict_b: dict, negate: bool = False
+    ):
+        """
+        Asserts that the two state dicts are different.
+        If `negate` is true, it asserts that the two state dicts are the same.
+        """
+        assert_fn = self.assertFalse if negate else self.assertTrue
+        assert_fn(
+            any(
+                [
+                    not torch.equal(weight_a, weight_b)
+                    for weight_a, weight_b in zip(
+                        state_dict_a.values(), state_dict_b.values()
+                    )
+                ]
+            )
+        )
 
     def test_al_training(self):
         """

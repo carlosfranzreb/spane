@@ -11,7 +11,6 @@ import random
 import shutil
 
 from speechbrain.inference.speaker import EncoderClassifier
-from speechbrain.utils.checkpoints import Checkpointer
 from hyperpyyaml import load_hyperpyyaml
 from omegaconf import DictConfig
 import torch

@@ -45,18 +45,15 @@ class SpkId(InferComponent):
             self.load_ckpt(self.model, config.ckpt, config.train_config)
 
         self.model.eval()
-    
+
     def load_ckpt(self, model: EncoderClassifier, ckpt_dir: str, train_config_f: str):
-        """Load the speechbrain checkpoint.
-        For speaker_brain (train), embedding_models was accessed by hparams.
-        TODO: test that this works for init and train.
-        """
+        """Load the speechbrain checkpoint."""
         LOGGER.info(f"Loading checkpoint {ckpt_dir}")
         emb_model_ckpt = os.path.join(ckpt_dir, "embedding_model.ckpt")
         emb_model_state_dict = torch.load(
             emb_model_ckpt, map_location=self.device, weights_only=False
         )
-        ckpt_dim = emb_model_state_dict["blocks.0.conv.conv.weight"].shape[1]
+        ckpt_dim = emb_model_state_dict["blocks.0.conv.weight"].shape[1]
         model_dim = model.hparams.embedding_model.blocks[0].conv.in_channels
 
         # if the shape does not fit, initialize the model with the train config
@@ -82,15 +79,15 @@ class SpkId(InferComponent):
             )
             model.hparams.embedding_model = speaker_brain.modules.embedding_model
             model.hparams.compute_features = speaker_brain.modules.compute_features
-        
+
         # load the checkpoints
         model.hparams.embedding_model.load_state_dict(emb_model_state_dict)
 
         compute_features_ckpt = os.path.join(ckpt_dir, "compute_features.ckpt")
         if os.path.exists(compute_features_ckpt):
             compute_features_state_dict = torch.load(
-                    compute_features_ckpt, map_location=self.device, weights_only=False
-                )
+                compute_features_ckpt, map_location=self.device, weights_only=False
+            )
             model.hparams.compute_features.load_state_dict(compute_features_state_dict)
         else:
             LOGGER.warning("There is no `compute_features.ckpt`")
@@ -249,8 +246,8 @@ class SpkId(InferComponent):
         )
 
         # load the trained model
-        self.model.hparams.embedding_model = speaker_brain.modules.embedding_model
-        self.model.hparams.compute_features = speaker_brain.modules.compute_features
+        self.model.mods.embedding_model = speaker_brain.modules.embedding_model
+        self.model.mods.compute_features = speaker_brain.modules.compute_features
         self.model.eval()
 
 

@@ -54,6 +54,7 @@ compute_features:
   phone_lexicon: spane/spkanon_models/knnvc_private/phone_lexicon.txt
   wavlm_ckpt: checkpoints/WavLM-Large.pt
   phone_predictor_ckpt: checkpoints/phone_decoder.pt
+  ignore_durs: true
 
 embedding_model: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
   input_size: !ref <n_phones>

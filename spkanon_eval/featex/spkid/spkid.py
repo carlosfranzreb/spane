@@ -52,7 +52,11 @@ class SpkId(InferComponent):
         emb_model_state_dict = torch.load(
             emb_model_ckpt, map_location=self.device, weights_only=False
         )
-        ckpt_dim = emb_model_state_dict["blocks.0.conv.weight"].shape[1]
+        try:
+            ckpt_dim = emb_model_state_dict["blocks.0.conv.weight"].shape[1]
+        except KeyError:
+            ckpt_dim = emb_model_state_dict["blocks.0.conv.conv.weight"].shape[1]
+
         model_dim = model.hparams.embedding_model.blocks[0].conv.in_channels
 
         # if the shape does not fit, initialize the model with the train config

@@ -248,9 +248,10 @@ class SpkId(InferComponent):
             progressbar=True,
         )
 
-        # load the trained model
-        self.model.mods.embedding_model = speaker_brain.modules.embedding_model
-        self.model.mods.compute_features = speaker_brain.modules.compute_features
+        # load the trained model from the best checkpoint
+        ckpt_dirs = [d for d in os.listdir(dump_dir) if d.startswith("CKPT")]
+        ckpt_dir = os.path.join(dump_dir, sorted(ckpt_dirs)[0])
+        self.load_ckpt(self.model, ckpt_dir, self.config.train_config)
         self.model.eval()
 
 

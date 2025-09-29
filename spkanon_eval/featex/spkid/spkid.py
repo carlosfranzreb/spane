@@ -94,10 +94,11 @@ class SpkId(InferComponent):
             model.hparams.compute_features.load_state_dict(compute_features_state_dict)
         else:
             LOGGER.warning("There is no `compute_features.ckpt`")
-        
-        # copy the modules to `mods`
-        model.mods.embedding_model = model.hparams.embedding_model
-        model.mods.compute_features = model.hparams.compute_features
+
+        # copy the modules to `mods` if appropriate
+        if hasattr(model, "mods"):
+            model.mods.embedding_model = model.hparams.embedding_model
+            model.mods.compute_features = model.hparams.compute_features
 
     def to(self, device: str) -> None:
         self.device = device

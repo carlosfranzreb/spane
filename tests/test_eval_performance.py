@@ -76,6 +76,39 @@ class TestEvalPerformance(unittest.TestCase):
                 with self.subTest(fname=fname):
                     self.assertEqual(results, expected)
 
+            # for `cpu_specs.txt`, compare it with the CPU in this machine
+            if fname == "cpu_specs.txt":
+                f_expected = os.path.join(
+                    results_dir, fname + ".expected"
+                )  # Use distinct name to avoid overwrite issues
+                operating_system = sys.platform
+                if operating_system == "darwin":
+                    os.system(f"sysctl -a | grep machdep.cpu > {f_expected}")
+                elif operating_system == "linux":
+                    os.system(f"lscpu > {f_expected}")
+                else:
+                    raise NotImplementedError("Unsupported operating system.")
+
+                with open(os.path.join(results_dir, fname)) as f:
+                    results = f.readlines()
+                with open(f_expected) as f:
+                    expected = f.readlines()
+
+                def filter_volatile(lines):
+                    """Ignore specs whose values change over time."""
+                    volatile_keys = ["CPU(s) scaling MHz", "CPU MHz", "BogoMIPS"]
+                    return [
+                        line
+                        for line in lines
+                        if not any(key in line for key in volatile_keys)
+                    ]
+
+                with self.subTest(fname=fname):
+                    # Compare only the static lines
+                    self.assertEqual(
+                        filter_volatile(results), filter_volatile(expected)
+                    )
+
             # check that the header and first col match, ignore the numbers
             else:
                 with open(os.path.join(results_dir, fname)) as f:

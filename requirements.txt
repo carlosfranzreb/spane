@@ -7,7 +7,6 @@ omegaconf>=2.1.0
 transformers>=4.30.0
 editdistance>=0.6.2
 pandas>=2.0.3
-praat-parselmouth==0.4.6
 
 # NISQA dependencies
 librosa>=0.8.1
@@ -17,3 +16,6 @@ matplotlib>=3.5.1
 ruff==0.12.4
 coverage==7.9.2
 pre-commit==4.2.0
+
+# For Jakob's prosody embeddings
+praat-parselmouth==0.4.6

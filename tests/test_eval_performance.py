@@ -90,8 +90,6 @@ class TestEvalPerformance(unittest.TestCase):
                         if not any(key in line for key in volatile_keys)
                     ]
                 
-                print(filter_volatile(results))
-
                 with self.subTest(fname=fname):
                     self.assertEqual(
                         filter_volatile(results), filter_volatile(expected)

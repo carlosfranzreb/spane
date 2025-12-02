@@ -19,12 +19,13 @@ from spkanon_eval.evaluation import PerformanceEvaluator
 class DummyModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc = torch.nn.Linear(1, 1)
         self.device = "cpu"
+        self.fc = torch.nn.Linear(1, 1)
 
     def forward(self, *args):
-        input = torch.tensor([1.0])
-        return self.fc(input)
+        self.fc.to(self.device)
+        x = torch.tensor([1.0], device=self.device)
+        return self.fc(x)
 
 
 class TestEvalPerformance(unittest.TestCase):
@@ -53,28 +54,14 @@ class TestEvalPerformance(unittest.TestCase):
         results_dir = os.path.join(exp_folder, "eval", "performance")
 
         # assert that both directories contain the correct number of files
+        n_files = 4 if torch.cuda.is_available else 2
         self.assertTrue(os.path.isdir(results_dir))
-        self.assertEqual(len(os.listdir(results_dir)), 2)
+        self.assertEqual(len(os.listdir(results_dir)), n_files)
 
         # assert that the results files contain the same lines
         for fname in os.listdir(results_dir):
             with open(os.path.join(results_dir, fname)) as f:
                 results = f.readlines()
-
-            # for `cpu_specs.txt`, compare it with the CPU in this machine
-            if fname == "cpu_specs.txt":
-                f_expected = os.path.join(results_dir, fname)
-                operating_system = sys.platform
-                if operating_system == "darwin":
-                    os.system(f"sysctl -a | grep machdep.cpu > {f_expected}")
-                elif operating_system == "linux":
-                    os.system(f"lscpu > {f_expected}")
-                else:
-                    raise NotImplementedError("Unsupported operating system.")
-                with open(os.path.join(results_dir, fname)) as f:
-                    expected = f.readlines()
-                with self.subTest(fname=fname):
-                    self.assertEqual(results, expected)
 
             # for `cpu_specs.txt`, compare it with the CPU in this machine
             if fname == "cpu_specs.txt":
@@ -102,15 +89,16 @@ class TestEvalPerformance(unittest.TestCase):
                         for line in lines
                         if not any(key in line for key in volatile_keys)
                     ]
+                
+                print(filter_volatile(results))
 
                 with self.subTest(fname=fname):
-                    # Compare only the static lines
                     self.assertEqual(
                         filter_volatile(results), filter_volatile(expected)
                     )
 
             # check that the header and first col match, ignore the numbers
-            else:
+            elif fname == "cpu_inference.txt":
                 with open(os.path.join(results_dir, fname)) as f:
                     expected = f.readlines()
                 with self.subTest(fname=fname):

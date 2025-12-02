@@ -1,3 +1,5 @@
+torch<2.9
+torchaudio<2.9
 speechbrain==1.0.3
 openai-whisper>=20230314
 plda @ https://github.com/RaviSoji/plda/tarball/master

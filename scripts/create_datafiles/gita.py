@@ -6,7 +6,7 @@ is stored in the label field. Whether the speaker has PD is stored in the "pd" f
 We also store speaker information such as gender and age, which are used in the
 evaluation.
 
-TODO: python scripts/create_datafiles/gita.py /cfs/collections-new/speech_parkinson_corpora/data/gita data/gita/read_text.txt /cfs/collections-new/speech_parkinson_corpora/data
+python scripts/create_datafiles/gita.py /cfs/collections-new/speech_parkinson_corpora/data/gita READ-TEXT data/gita/read_text.txt /cfs/collections-new/speech_parkinson_corpora/data
 """
 
 import os
@@ -18,8 +18,15 @@ import torchaudio
 from tqdm import tqdm
 
 
+READ_TEXT = """Ayer fui al médico.
+¿Qué le pasa? Me preguntó.
+Yo le dije: Ay doctor! Donde pongo el dedo me duele.
+Tiene la uña rota?
+Sí.
+Pues ya sabemos queé es. Deje su cheque a la salida."""
+
 def create_file(
-    dataset_dir: str, dump_file: str, root_folder: str, max_duration: int = None
+    dataset_dir: str, task: str, dump_file: str, root_folder: str, max_duration: int = None
 ):
     """
     - audio_dir: comprises all the required dataset information:
@@ -47,9 +54,15 @@ def create_file(
         if not f.endswith(".wav"):
             continue
         
-        # get info from fname
+        # get info from fname and check task
         fname = os.path.splitext(f)[0]
-        group, task, spk, utt = fname.split("_")
+        group, audio_task, spk, utt = fname.split("_")
+        if audio_task != task:
+            continue
+        
+        # get the transcript
+        if task == "READ-TEXT":
+            text = READ_TEXT.replace("\n", " ")
 
         # get the audio duration and check for max. duration
         audiofile = os.path.join(audios_dir, f)
@@ -64,10 +77,10 @@ def create_file(
             json.dumps(
                 {
                     "path": audiofile.replace(root_folder, "{root}"),
-                    "text": "TODO",
+                    "text": text,
                     "duration": round(duration, 2),
                     "label": spk,
-                    "pd": spk_info[spk]["UPDRS"] is not None,
+                    "pd": len(spk_info[spk]["UPDRS"]) > 0,
                     "gender": spk_info[spk]["sex"],
                     "UPDRS": spk_info[spk]["UPDRS"],
                     "UPDRS-speech": spk_info[spk]["UPDRS-speech"],
@@ -76,7 +89,8 @@ def create_file(
                     "age_decade": str(spk_info[spk]["age"][0]),
                     "time_after_diagnosis": spk_info[spk]["time after diagnosis"],
                     "dataset": "gita",
-                }
+                },
+                ensure_ascii=False,
             )
             + "\n"
         )
@@ -86,13 +100,15 @@ def create_file(
 
 
 if __name__ == "__main__":
-    # TODO: create task-specific datafiles
     parser = ArgumentParser()
     parser.add_argument("folder", help="Path to the GITA directory")
+    parser.add_argument("task", help="Task to get the data from (e.g. READ-TEXT)")
     parser.add_argument("dump_file", help="Path to the dump file")
     parser.add_argument("root_folder", help="Path that will be replaced with {root}")
     parser.add_argument(
         "--max_duration", type=int, help="Min. no. of utterances per speaker"
     )
     args = parser.parse_args()
-    create_file(args.folder, args.dump_file, args.root_folder, args.max_duration)
+    create_file(
+        args.folder, args.task, args.dump_file, args.root_folder, args.max_duration
+    )

@@ -7,6 +7,8 @@ We also store speaker information such as gender and age, which are used in the
 evaluation.
 
 python scripts/create_datafiles/gita.py /cfs/collections-new/speech_parkinson_corpora/data/gita READ-TEXT data/gita/read_text.txt /cfs/collections-new/speech_parkinson_corpora/data
+python scripts/create_datafiles/gita.py /cfs/collections-new/speech_parkinson_corpora/data/gita WORDS data/gita/words.txt /cfs/collections-new/speech_parkinson_corpora/data
+
 """
 
 import os
@@ -25,8 +27,26 @@ Tiene la uña rota?
 Sí.
 Pues ya sabemos queé es. Deje su cheque a la salida."""
 
+SENTENCE_MAPPING = {
+    "JUAN": "JUAN SE ROMPIÓ UNA PIERNA CUANDO IBA EN LA MOTO",
+    "LAURA": "LAURA SUBE AL TREN QUE PASA",
+    "LOSLIBROS": "LOS LIBROS NUEVOS NO CABEN EN LA MESA DE LA OFICINA",
+    "LUISA": "LUISA REY COMPRA EL COLCHÓN DURO QUE TANTO LE GUSTA",
+    "MICASA": "MI CASA TIENE TRES CUARTOS",
+    "OMAR": "OMAR QUE VIVE CERCA TRAJO MIEL",
+    "PREOCUPADO": "ESTOY MUY PREOCUPADO CADA VEZ ME ES MÁS DIFÍCIL HABLAR",
+    "PRECUPADO": "ESTOY MUY PREOCUPADO CADA VEZ ME ES MÁS DIFÍCIL HABLAR",
+    "ROSITA": "ROSITA NIÑO QUE PINTA BIEN DONÓ SUS CUADROS AYER",
+    "TRISTE": "ESTOY MUY TRISTE AYER VI MORIR A UN AMIGO",
+    "VISTE": "VISTE LAS NOTICIAS YO VI GANAR LA MEDALLA DE PLATA EN PESAS. ESE MUCHACHO TIENE MUCHA FUERZA",
+}
+
 def create_file(
-    dataset_dir: str, task: str, dump_file: str, root_folder: str, max_duration: int = None
+    dataset_dir: str,
+    task: str,
+    dump_file: str,
+    root_folder: str,
+    max_duration: int = None,
 ):
     """
     - audio_dir: comprises all the required dataset information:
@@ -61,8 +81,17 @@ def create_file(
             continue
         
         # get the transcript
-        if task == "READ-TEXT":
-            text = READ_TEXT.replace("\n", " ")
+        match task:
+            case "SUSTAINED-VOWELS":
+                text = utt[0]
+            case "WORDS" | "DDK":
+                text = utt
+            case "READ-TEXT":
+                text = READ_TEXT.replace("\n", " ")
+            case "SENTENCES":
+                text = SENTENCE_MAPPING[utt]
+            case _:
+                text = ""
 
         # get the audio duration and check for max. duration
         audiofile = os.path.join(audios_dir, f)
@@ -84,7 +113,7 @@ def create_file(
                     "gender": spk_info[spk]["sex"],
                     "UPDRS": spk_info[spk]["UPDRS"],
                     "UPDRS-speech": spk_info[spk]["UPDRS-speech"],
-                    "H/Y": spk_info[spk]["H/Y"],
+                    "H-Y": spk_info[spk]["H/Y"],
                     "age": spk_info[spk]["age"],
                     "age_decade": str(spk_info[spk]["age"][0]),
                     "time_after_diagnosis": spk_info[spk]["time after diagnosis"],

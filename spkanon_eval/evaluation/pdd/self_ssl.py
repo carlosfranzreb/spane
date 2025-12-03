@@ -32,13 +32,13 @@ class PdEvaluator(InferComponent, EvalComponent):
         self.model.eval()
         self.model.to(device)
 
-    def to(self, device):
+    def to(self, device: str):
         self.device = device
         self.model.to(device)
 
     @torch.inference_mode()
     def run(self, batch):
-        return self.model(batch[0].to(self.device), batch[2])
+        return self.model(batch[0], batch[2])
 
     def train(self, exp_folder, datafiles):
         raise NotImplementedError

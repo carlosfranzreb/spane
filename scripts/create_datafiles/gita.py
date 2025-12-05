@@ -4,11 +4,8 @@ line, with the fields "path": str, "duration": float and "label": int. The speak
 is stored in the label field. Whether the speaker has PD is stored in the "pd" field.
 
 We also store speaker information such as gender and age, which are used in the
-evaluation.
-
-python scripts/create_datafiles/gita.py /cfs/collections-new/speech_parkinson_corpora/data/gita READ-TEXT data/gita/read_text.txt /cfs/collections-new/speech_parkinson_corpora/data
-python scripts/create_datafiles/gita.py /cfs/collections-new/speech_parkinson_corpora/data/gita WORDS data/gita/words.txt /cfs/collections-new/speech_parkinson_corpora/data
-
+evaluation. The structure expected for the dataset is the same as Gimeno's:
+<https://github.com/david-gimeno/interpreting-ssl-parkinson-speech>
 """
 
 import os
@@ -41,19 +38,23 @@ SENTENCE_MAPPING = {
     "VISTE": "VISTE LAS NOTICIAS YO VI GANAR LA MEDALLA DE PLATA EN PESAS. ESE MUCHACHO TIENE MUCHA FUERZA",
 }
 
+
 def create_file(
     dataset_dir: str,
+    splits_dir: str,
     task: str,
     dump_file: str,
     root_folder: str,
     max_duration: int = None,
 ):
     """
-    - audio_dir: comprises all the required dataset information:
+    - `dataset_dir` comprises all the required dataset information:
         - `norm_audios` directory, comprising all the audio files from GITA.
             Audio normalization is done with ffmpeg-normalize.
         - `metadata.csv` file with the speaker information.
-        - `transcripts` directory with the transcripts in txt files. TODO
+    - `splits_dir` defines the test set of each fold. Only these test files are
+        retrieved, and marked with their corresponding fold. `splits_dir` should
+        contain 5 subdirectories named `fold_0`, `fold_1`, etc.
     - We remove the samples that are longer than the max. duration, defined by the
         max_duration parameter.
     """
@@ -66,6 +67,23 @@ def create_file(
     reader = csv.DictReader(open(metadata_f))
     spk_info = {row["subject_id"]: row for row in reader}
 
+    # get the task's test files of each fold form the splits directory
+    test_files = list()
+    for fold in os.listdir(splits_dir):
+        if fold.endswith(".csv"):
+            continue
+
+        test_f = os.path.join(splits_dir, fold, "test.csv")
+        reader = csv.DictReader(open(test_f))
+        test_files.append([])
+        for row in reader:
+            if task != row["task_id"]:
+                continue
+
+            label = "PD" if row["label"] == 1.0 else "HC"
+            fname = f"{label}_{task}_{row['sample_id']}"
+            test_files[-1].append(fname)
+
     # create a writer object for the dump file
     writer = open(dump_file, "w")
 
@@ -74,13 +92,24 @@ def create_file(
     for f in tqdm(os.listdir(audios_dir)):
         if not f.endswith(".wav"):
             continue
-        
+
+        # find fold or continue if not found
+        fname = os.path.splitext(f)[0]
+        fold_idx = -1
+        for idx, files in enumerate(test_files):
+            if fname in files:
+                fold_idx = idx
+                break
+
+        if fold_idx == -1:
+            continue
+
         # get info from fname and check task
         fname = os.path.splitext(f)[0]
         group, audio_task, spk, utt = fname.split("_")
         if audio_task != task:
             continue
-        
+
         # get the transcript
         match task:
             case "SUSTAINED-VOWELS":
@@ -118,6 +147,7 @@ def create_file(
                     "age": spk_info[spk]["age"],
                     "age_decade": str(spk_info[spk]["age"][0]),
                     "time_after_diagnosis": spk_info[spk]["time after diagnosis"],
+                    "fold": fold_idx,
                     "dataset": "gita",
                 },
                 ensure_ascii=False,
@@ -131,7 +161,8 @@ def create_file(
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("folder", help="Path to the GITA directory")
+    parser.add_argument("dataset_dir", help="Path to the GITA directory")
+    parser.add_argument("splits_dir", help="Path to the GITA splits")
     parser.add_argument("task", help="Task to get the data from (e.g. READ-TEXT)")
     parser.add_argument("dump_file", help="Path to the dump file")
     parser.add_argument("root_folder", help="Path that will be replaced with {root}")
@@ -140,5 +171,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     create_file(
-        args.folder, args.task, args.dump_file, args.root_folder, args.max_duration
+        args.dataset_dir,
+        args.splits_dir,
+        args.task,
+        args.dump_file,
+        args.root_folder,
+        args.max_duration,
     )

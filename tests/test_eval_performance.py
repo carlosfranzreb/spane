@@ -97,14 +97,14 @@ class TestEvalPerformance(unittest.TestCase):
                 def filter_volatile(lines):
                     """Ignore specs whose values change over time."""
                     volatile_keys = ["CPU(s) scaling MHz", "CPU MHz", "BogoMIPS"]
-                    return [
+                    out = [
                         line
                         for line in lines
                         if not any(key in line for key in volatile_keys)
                     ]
+                    return out
 
                 with self.subTest(fname=fname):
-                    # Compare only the static lines
                     self.assertEqual(
                         filter_volatile(results), filter_volatile(expected)
                     )

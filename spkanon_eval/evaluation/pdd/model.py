@@ -1,3 +1,6 @@
+import json
+import numpy as np
+
 import torch
 from torch import Tensor
 import torchaudio
@@ -45,7 +48,25 @@ class PdDetector(torch.nn.Module):
         )
 
     def forward(self, x: Tensor, lens: Tensor) -> Tensor:
-        x = self.w2v.extract_features(x)[0][self.w2v_layer]
+        # ---
+        # ! TMP hack to catch other errors besides different w2v features
+        # x = self.w2v.extract_features(x)[0][self.w2v_layer]
+        datafile = "logs/pdd/1764760360/data/eval.txt"
+        numpy_files = list()
+        for line in open(datafile):
+            f = json.loads(line)["path"]
+            f = f.replace("/audios/", "/speech_features/wav2vec/layer07/")
+            f = f[:-3] + "npz"
+            numpy_files.append(f)
+        
+        batch_feats = list()
+        for _ in range(x.shape[0]):
+            f = numpy_files.pop(0)
+            feats = torch.from_numpy(np.load(f)["data"]).to(x.device)
+            batch_feats.append(feats)
+        
+        x = torch.nn.utils.rnn.pad_sequence(batch_feats, batch_first=True)
+        # ---
         
         w2v_lens = lens // 320
         w2v_lens = w2v_lens.to(torch.long)

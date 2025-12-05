@@ -50,7 +50,8 @@ def create_file(
 ):
     """
     - audio_dir: comprises all the required dataset information:
-        - `audios` directory, comprising all the audio files from GITA.
+        - `norm_audios` directory, comprising all the audio files from GITA.
+            Audio normalization is done with ffmpeg-normalize.
         - `metadata.csv` file with the speaker information.
         - `transcripts` directory with the transcripts in txt files. TODO
     - We remove the samples that are longer than the max. duration, defined by the
@@ -69,7 +70,7 @@ def create_file(
     writer = open(dump_file, "w")
 
     # iterate over the files in the folder
-    audios_dir = os.path.join(dataset_dir, "audios")
+    audios_dir = os.path.join(dataset_dir, "norm_audios")
     for f in tqdm(os.listdir(audios_dir)):
         if not f.endswith(".wav"):
             continue

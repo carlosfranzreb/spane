@@ -1,0 +1,7 @@
+data:
+  config_cfg: spane/config/datasets/config.yaml
+  datasets:
+    eval:
+      - spane/data/gita/read_text.txt
+    targets:
+      - spane/data/gita/read_text.txt

@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.metrics import classification_report
 
 
-def analyse_func(indices: np.ndarray, data: np.ndarray) -> list[int]:
+def analyse_func(indices: np.ndarray, data: np.ndarray) -> list[str]:
     """
     - Data is Nx2 array with columns (x, y)
     - Filter the samples with the given indices.
@@ -16,11 +16,13 @@ def analyse_func(indices: np.ndarray, data: np.ndarray) -> list[int]:
     results = list()
     for key in ["0", "1", "weighted avg"]:
         if key not in report:
-            results.extend([-1, -1, -1, 0])
+            results.extend([-1., -1., -1., 0.])
             continue
 
         results.extend(list(report[key].values()))
-    return [str(sum(indices)), str(np.round(np.mean(data[indices]), 2))]
+
+    results = [str(round(v, 2)) for v in results]
+    return results
 
 
 def headers_func(dump_file: str, key: str = None):
@@ -33,9 +35,8 @@ def headers_func(dump_file: str, key: str = None):
     - p, r, f1, s: precision, recall, f1-score, support
     """
     with open(dump_file, "w") as f:
+        f.write("dataset ")
         if key is not None:
-            f.write(
-                f"dataset {key} hc_p hc_r hc_f1 hc_s pd_p pd_r pd_f1 pd_s w_p w_r w_f1 w_s\n"
-            )
-        else:
-            f.write("dataset n_samples mos\n")
+            f.write(f"{key} ")
+
+        f.write("hc_p hc_r hc_f1 hc_s pd_p pd_r pd_f1 pd_s w_p w_r w_f1 w_s\n")

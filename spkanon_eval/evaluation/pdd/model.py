@@ -46,8 +46,9 @@ class PdDetector(torch.nn.Module):
 
     def forward(self, x: Tensor, lens: Tensor) -> Tensor:
         x = self.w2v.extract_features(x)[0][self.w2v_layer]
+        
         w2v_lens = lens // 320
-
+        w2v_lens = w2v_lens.to(torch.long)
         mask = make_pad_mask(w2v_lens)
         if mask.shape[1] == x.shape[1] + 1:
             mask = mask[:, :-1]
@@ -62,7 +63,7 @@ def make_pad_mask(lengths: Tensor) -> Tensor:
     bs = lengths.shape[0]
     maxlen = lengths.max()
 
-    seq_range = torch.arange(0, maxlen, dtype=torch.int64)
+    seq_range = torch.arange(0, maxlen, dtype=torch.int64, device=lengths.device)
     seq_range_expand = seq_range.unsqueeze(0).expand(bs, maxlen)
     seq_length_expand = seq_range_expand.new(lengths).unsqueeze(-1)
     mask = seq_range_expand >= seq_length_expand

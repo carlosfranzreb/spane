@@ -43,7 +43,6 @@ class PdDetector(torch.nn.Module):
         )
 
     def forward(self, x: Tensor, lens: Tensor) -> Tensor:
-
         x, w2v_lens = self.w2v.extract_features(x, lens)
         x = x[self.w2v_layer]
         x = (x - self.stats["median"]) / self.stats["std"]

@@ -3,7 +3,7 @@ Self-SSL model for Parkinson's disease detection from
 
 <https://github.com/david-gimeno/interpreting-ssl-parkinson-speech>
 
-TODO: 
+TODO:
 
 1. I'm currently evaluating on all of the data, but 4/5ths of it are used for training.
 """
@@ -32,7 +32,7 @@ class PdEvaluator(InferComponent, EvalComponent):
         self.config.data.config.sample_rate_out = SAMPLE_RATE
         self.device = device
 
-        self.model = PdDetector(config.ckpt)
+        self.model = PdDetector(config.ckpt, config.stats_f)
         self.model.eval()
         self.model.to(device)
 

@@ -1,17 +1,15 @@
-import json
-import numpy as np
-
 import torch
 from torch import Tensor
 import torchaudio
 
-from .multiheaded_attention import MultiHeadedAttention
+from .multiheaded_attention import MHSA
 
 
 class PdDetector(torch.nn.Module):
     def __init__(
         self,
         ckpt: str,
+        stats_f: str,
         w2v_layer: int = 7,
         latent_dim: int = 1024,
         n_heads: int = 1,
@@ -22,13 +20,10 @@ class PdDetector(torch.nn.Module):
         self.w2v_layer = w2v_layer
         self.w2v = torchaudio.pipelines.WAV2VEC2_XLSR_300M.get_model()
 
-        self.mha = MultiHeadedAttention(
-            query_dim=latent_dim,
-            key_dim=latent_dim,
-            value_dim=latent_dim,
-            num_heads=n_heads,
-            attn_type="self",
-        )
+        self.stats = torch.load(stats_f, weights_only=False)
+        self.stats = {k: torch.tensor(v) for k, v in self.stats.items()}
+
+        self.mha = MHSA(latent_dim=latent_dim, num_heads=n_heads)
         self.classifier = torch.nn.Sequential(
             torch.nn.LayerNorm(latent_dim),
             torch.nn.SiLU(),
@@ -48,39 +43,25 @@ class PdDetector(torch.nn.Module):
         )
 
     def forward(self, x: Tensor, lens: Tensor) -> Tensor:
-        # ---
-        # ! TMP hack to catch other errors besides different w2v features
-        # x = self.w2v.extract_features(x)[0][self.w2v_layer]
-        datafile = "logs/pdd/1764760360/data/eval.txt"
-        numpy_files = list()
-        for line in open(datafile):
-            f = json.loads(line)["path"]
-            f = f.replace("/audios/", "/speech_features/wav2vec/layer07/")
-            f = f[:-3] + "npz"
-            numpy_files.append(f)
-        
-        batch_feats = list()
-        for _ in range(x.shape[0]):
-            f = numpy_files.pop(0)
-            feats = torch.from_numpy(np.load(f)["data"]).to(x.device)
-            batch_feats.append(feats)
-        
-        x = torch.nn.utils.rnn.pad_sequence(batch_feats, batch_first=True)
-        # ---
-        
-        w2v_lens = lens // 320
-        w2v_lens = w2v_lens.to(torch.long)
+
+        x, w2v_lens = self.w2v.extract_features(x, lens)
+        x = x[self.w2v_layer]
+        x = (x - self.stats["median"]) / self.stats["std"]
         mask = make_pad_mask(w2v_lens)
-        if mask.shape[1] == x.shape[1] + 1:
-            mask = mask[:, :-1]
 
         x = self.mha(x, x, x, mask)
-        x = x.mean(dim=1).unsqueeze(1)
+        x = x.sum(dim=1)
+        x = x / w2v_lens.unsqueeze(1)
         x = self.classifier(x).squeeze(1)
+
         return x
 
 
 def make_pad_mask(lengths: Tensor) -> Tensor:
+    """
+    Input lengths has shape (batch_size)
+    Output mask has shape (batch_size, 1, max_features)
+    """
     bs = lengths.shape[0]
     maxlen = lengths.max()
 
@@ -88,5 +69,6 @@ def make_pad_mask(lengths: Tensor) -> Tensor:
     seq_range_expand = seq_range.unsqueeze(0).expand(bs, maxlen)
     seq_length_expand = seq_range_expand.new(lengths).unsqueeze(-1)
     mask = seq_range_expand >= seq_length_expand
+    mask = mask.unsqueeze(1)
 
     return mask

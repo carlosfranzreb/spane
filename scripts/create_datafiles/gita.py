@@ -6,6 +6,9 @@ is stored in the label field. Whether the speaker has PD is stored in the "pd" f
 We also store speaker information such as gender and age, which are used in the
 evaluation. The structure expected for the dataset is the same as Gimeno's:
 <https://github.com/david-gimeno/interpreting-ssl-parkinson-speech>
+
+TODO: tmp
+python scripts/create_datafiles/gita.py /Users/cafr02/datasets/gita /Users/cafr02/repos/spkanon/splits/gita SENTENCES data/gita/sentences.txt /Users/cafr02/dataset/
 """
 
 import os
@@ -80,7 +83,7 @@ def create_file(
             if task != row["task_id"]:
                 continue
 
-            label = "PD" if row["label"] == 1.0 else "HC"
+            label = "PD" if row["label"] == "1" else "HC"
             fname = f"{label}_{task}_{row['sample_id']}"
             test_files[-1].append(fname)
 

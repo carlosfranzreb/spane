@@ -63,7 +63,7 @@ def main(config: DictConfig):
                 )
             config.data.config.anon_folder = config.eval.config.exp_folder
 
-        elif any([c.train for c in config.eval.components.values()]):
+        elif any([c.get("train", False) for c in config.eval.components.values()]):
             prepare_datafile("train_eval", config, exp_folder)
 
         # create the eval datafiles if they don't exist (for the baseline)

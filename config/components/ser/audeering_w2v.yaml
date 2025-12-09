@@ -1,5 +1,4 @@
 audeering_w2v:
   cls: spkanon_eval.evaluation.EmotionEvaluator
   init: audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim
-  train: false
   root_folder: ${data.config.root_folder}

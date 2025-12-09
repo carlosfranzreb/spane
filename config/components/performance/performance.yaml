@@ -1,6 +1,5 @@
 performance:
   cls: spkanon_eval.evaluation.PerformanceEvaluator
-  train: false
   sample_rate: ${sample_rate}
   repetitions: 10
   durations:

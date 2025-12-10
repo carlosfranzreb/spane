@@ -137,7 +137,7 @@ def max_batch_size(model: Anonymizer, audio: torch.Tensor, batch_size: int = 1) 
         batch = [
             audio_batch.to(model.device),
             torch.randint(10, [batch_size], device=model.device),
-            torch.ones(batch_size, device=model.device, dtype=torch.int32)
+            torch.ones(batch_size, device=model.device, dtype=torch.long)
             * audio.shape[0],
         ]
         torch.cuda.reset_peak_memory_stats()

@@ -59,15 +59,16 @@ class PdDetector(torch.nn.Module):
                     if "classifier" in k
                 }
             )
-            self.mha.append(fold_mha)
-            self.classifier.append(fold_classifier)
+            self.mha.append(fold_mha.to(device))
+            self.classifier.append(fold_classifier.to(device))
 
-    def forward(self, x: Tensor, lens: Tensor, folds: Tensor) -> Tensor:
+    def forward(self, x: Tensor, lens: Tensor, folds: Tensor = None) -> Tensor:
         """
         Args:
             `x`: waveforms, shape (bs, max_samples)
             `lens`: lengths of waveforms, shape (bs,)
-            `folds`: fold of each waveform, shape (bs,)
+            `folds`: fold of each waveform, shape (bs,). It can only be null for the
+                batch size calculator, where mock folds are used.
 
         Returns:
             `x`: PD predictions, shape (bs, 2). For each waveform, the first value of
@@ -80,8 +81,12 @@ class PdDetector(torch.nn.Module):
         x = x[self.w2v_layer]
         mask = make_pad_mask(w2v_lens)
 
+        # create mock folds if necessary
+        if folds is None:
+            folds = torch.linspace(0, 4, x.shape[0], dtype=torch.long)
+
         # make the predictions for each fold
-        out = torch.empty((x.shape[0], 2))
+        out = torch.empty((x.shape[0], 2), device=x.device)
         for fold in torch.unique(folds, sorted=False):
             filter_for_fold = folds == fold
             x_fold = x[filter_for_fold]
@@ -100,13 +105,13 @@ class PdDetector(torch.nn.Module):
 
 def make_pad_mask(lengths: Tensor) -> Tensor:
     """
-    Input lengths has shape (batch_size)
+    Input lengths has shape (batch_size) and is of type torch.long
     Output mask has shape (batch_size, 1, max_features)
     """
     bs = lengths.shape[0]
     maxlen = lengths.max()
 
-    seq_range = torch.arange(0, maxlen, dtype=torch.int64, device=lengths.device)
+    seq_range = torch.arange(0, maxlen, dtype=torch.long, device=lengths.device)
     seq_range_expand = seq_range.unsqueeze(0).expand(bs, maxlen)
     seq_length_expand = seq_range_expand.new(lengths).unsqueeze(-1)
     mask = seq_range_expand >= seq_length_expand

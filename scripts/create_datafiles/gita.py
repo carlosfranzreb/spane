@@ -70,12 +70,10 @@ def create_file(
     reader = csv.DictReader(open(metadata_f))
     spk_info = {row["subject_id"]: row for row in reader}
 
-    # get the task's test files of each fold form the splits directory
+    # get the task's test files of each fold from the splits directory
     test_files = list()
-    for fold in os.listdir(splits_dir):
-        if fold.endswith(".csv"):
-            continue
-
+    for fold_idx in range(5):
+        fold = f"fold_{fold_idx}"
         test_f = os.path.join(splits_dir, fold, "test.csv")
         reader = csv.DictReader(open(test_f))
         test_files.append([])

@@ -82,7 +82,7 @@ class PdDetector(torch.nn.Module):
 
         # make the predictions for each fold
         out = torch.empty((x.shape[0], 2))
-        for fold in torch.unique(folds):
+        for fold in torch.unique(folds, sorted=False):
             filter_for_fold = folds == fold
             x_fold = x[filter_for_fold]
             mask_fold = mask[filter_for_fold]

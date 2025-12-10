@@ -2,6 +2,6 @@ data:
   config_cfg: spane/config/datasets/config.yaml
   datasets:
     eval:
-      - spane/data/gita/read_text.txt
+      - spane/data/gita/sentences.txt
     targets:
-      - spane/data/gita/read_text.txt
+      - spane/data/gita/sentences.txt

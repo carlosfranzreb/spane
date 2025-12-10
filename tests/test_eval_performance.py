@@ -54,7 +54,7 @@ class TestEvalPerformance(unittest.TestCase):
         results_dir = os.path.join(exp_folder, "eval", "performance")
 
         # assert that both directories contain the correct number of files
-        n_files = 4 if torch.cuda.is_available else 2
+        n_files = 4 if torch.cuda.is_available() else 2
         self.assertTrue(os.path.isdir(results_dir))
         self.assertEqual(len(os.listdir(results_dir)), n_files)
 

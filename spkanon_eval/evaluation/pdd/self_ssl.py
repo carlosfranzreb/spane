@@ -12,6 +12,7 @@ import os
 import logging
 
 import torch
+from torch import Tensor
 import numpy as np
 from tqdm import tqdm
 
@@ -32,7 +33,7 @@ class PdEvaluator(InferComponent, EvalComponent):
         self.config.data.config.sample_rate_out = SAMPLE_RATE
         self.device = device
 
-        self.model = PdDetector(config.ckpt, config.stats_f)
+        self.model = PdDetector(config.ckpt_dir, device)
         self.model.eval()
         self.model.to(device)
 
@@ -41,8 +42,8 @@ class PdEvaluator(InferComponent, EvalComponent):
         self.model.to(device)
 
     @torch.inference_mode()
-    def run(self, batch):
-        return self.model(batch[0], batch[2])
+    def run(self, batch: list[Tensor], folds: Tensor) -> Tensor:
+        return self.model(batch[0], batch[2], folds)
 
     def train(self, exp_folder, datafiles):
         raise NotImplementedError
@@ -70,7 +71,8 @@ class PdEvaluator(InferComponent, EvalComponent):
         for batch, sample_data in tqdm(
             eval_dataloader(self.config.data.config, datafile, self)
         ):
-            batch_out = self.run(batch)
+            folds = torch.tensor([d["fold"] for d in sample_data])
+            batch_out = self.run(batch, folds)
             batch_out = batch_out.argmax(dim=1)
             for idx, out in enumerate(batch_out):  # iterate through the batch
                 audiofile = sample_data[idx]["path"]

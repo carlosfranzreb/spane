@@ -44,7 +44,7 @@ def main(config: DictConfig):
             files = ["eval"]
             if config.eval.config.baseline is False:
                 files.append("anon_eval")
-            if any([c.train for c in config.eval.components.values()]):
+            if any([c.get("train", False) for c in config.eval.components.values()]):
                 files.append("train_eval")
                 if os.path.exists(
                     os.path.join(

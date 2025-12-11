@@ -6,9 +6,6 @@ is stored in the label field. Whether the speaker has PD is stored in the "pd" f
 We also store speaker information such as gender and age, which are used in the
 evaluation. The structure expected for the dataset is the same as Gimeno's:
 <https://github.com/david-gimeno/interpreting-ssl-parkinson-speech>
-
-TODO: tmp
-python scripts/create_datafiles/gita.py /Users/cafr02/datasets/gita /Users/cafr02/repos/spkanon/splits/gita SENTENCES data/gita/sentences.txt /Users/cafr02/dataset/
 """
 
 import os
@@ -168,7 +165,7 @@ if __name__ == "__main__":
     parser.add_argument("dump_file", help="Path to the dump file")
     parser.add_argument("root_folder", help="Path that will be replaced with {root}")
     parser.add_argument(
-        "--max_duration", type=int, help="Min. no. of utterances per speaker"
+        "--max_duration", type=int, help="Max. duration for filtering utterances"
     )
     args = parser.parse_args()
     create_file(

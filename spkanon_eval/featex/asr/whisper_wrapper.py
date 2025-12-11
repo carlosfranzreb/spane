@@ -27,7 +27,7 @@ class Whisper(InferComponent, EvalComponent):
         self.model.eval()
         self.max_chars_div = self.config.get("max_chars_div", None)
         self.options = whisper.DecodingOptions(
-            fp16=self.device == "cuda", language="en"
+            fp16=self.device == "cuda", language=config.language
         )
 
     @torch.inference_mode()

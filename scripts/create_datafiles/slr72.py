@@ -1,6 +1,10 @@
 """
 Creates the data file for the Open SLR dataset 72: Crowdsourced high-quality Colombian
 Spanish speech.
+
+To use them as targets for PD detection, I normalize them with ffmpeg normalize:
+
+> os.system(f"ffmpeg-normalize {path} -o {dump_path} -ar 16000 -f")
 """
 
 import os

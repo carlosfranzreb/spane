@@ -6,6 +6,10 @@ is stored in the label field. Whether the speaker has PD is stored in the "pd" f
 We also store speaker information such as gender and age, which are used in the
 evaluation. The structure expected for the dataset is the same as Gimeno's:
 <https://github.com/david-gimeno/interpreting-ssl-parkinson-speech>
+
+To use them as targets for PD detection, I normalize them with ffmpeg normalize:
+
+> os.system(f"ffmpeg-normalize {path} -o {dump_path} -ar 16000 -f")
 """
 
 import os

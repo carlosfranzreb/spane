@@ -43,7 +43,6 @@ def create_file(folder: str, dataset: str, dump_file: str, root_folder: str):
     labels_f = os.path.join(folder, "Labels", "labels_consensus.json")
     labels = json.load(open(labels_f))
     for file, annotations in labels.items():
-
         if annotations["Split_Set"] != dataset:
             continue
 

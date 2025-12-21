@@ -44,7 +44,6 @@ class BaseSelector:
 
         # check conversion constraints and store required metadata
         for key, value in cfg.conversion_constraints.items():
-
             # check that the value is correct
             if value not in [None, "same", "opposite"]:
                 error = f"Invalid value for the constraint `{key}`"

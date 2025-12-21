@@ -2,7 +2,6 @@
 val. data: src/featproc/models/StarGANv2VC/Data/val_list.txt
 """
 
-
 import os
 import json
 from argparse import ArgumentParser
@@ -69,7 +68,7 @@ def get_speaker_data(spk_id, speakers_file):
                 data = line.strip().split()
                 return {
                     "age": int(data[1]),
-                    "gender": data[2],
+                    "is_male": data[2] == "M",
                     "accent": data[3],
                     "region": data[4],
                     "dataset": "vctk",

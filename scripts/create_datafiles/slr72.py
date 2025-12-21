@@ -45,9 +45,8 @@ def create_file(
         # find transcript and speaker
         fname = os.path.splitext(f)[0]
         spk = fname.split("_")[1]
-        gender = "female" if fname.startswith("cof") else "male"
+        gender = fname.startswith("com")
         text = transcripts[gender][fname]
-        gender = gender[0].upper()
 
         # get the audio duration and check for max. duration
         audiofile = os.path.join(dataset_dir, f)
@@ -65,7 +64,7 @@ def create_file(
                     "text": text,
                     "duration": round(duration, 2),
                     "label": spk,
-                    "gender": gender,
+                    "is_male": gender,
                     "dataset": "slr72",
                 },
                 ensure_ascii=False,

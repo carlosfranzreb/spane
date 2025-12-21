@@ -138,7 +138,7 @@ def create_file(
                     "duration": round(duration, 2),
                     "label": spk,
                     "pd": len(spk_info[spk]["UPDRS"]) > 0,
-                    "gender": spk_info[spk]["sex"],
+                    "is_male": spk_info[spk]["sex"] == "M",
                     "UPDRS": spk_info[spk]["UPDRS"],
                     "UPDRS-speech": spk_info[spk]["UPDRS-speech"],
                     "H-Y": spk_info[spk]["H/Y"],

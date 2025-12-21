@@ -51,7 +51,7 @@ def create_file(folder, dump_file, root_folder, max_duration):
                                         "text": text.strip(),
                                         "duration": duration,
                                         "label": spk_id,
-                                        "gender": get_gender(spk_id, speakers_file),
+                                        "is_male": get_gender(spk_id, speakers_file),
                                         "dataset": "librispeech",
                                     }
                                 )
@@ -60,12 +60,12 @@ def create_file(folder, dump_file, root_folder, max_duration):
     writer.close()
 
 
-def get_gender(spk_id, speakers_file):
+def get_gender(spk_id: int, speakers_file: str) -> bool:
     """Given the speakers file of LibriSpeech and a speaker ID, return the gender."""
     with open(speakers_file) as f:
         for line in f:
             if line.startswith(spk_id):
-                return line.split("|")[1].strip()
+                return line.split("|")[1].strip() == "M"
 
 
 if __name__ == "__main__":

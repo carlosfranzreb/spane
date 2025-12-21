@@ -4,7 +4,6 @@ age, gender, accent, etc. in the datafile. This is useful to analyze the evaluat
 results.
 """
 
-
 import os
 import json
 from argparse import ArgumentParser
@@ -48,10 +47,10 @@ def create_file(data_file, dump_file, root_folder, max_duration, min_utts=2):
                         "text": row["sentence"],
                         "duration": duration,
                         "label": row["client_id"],  # speaker ID
-                        "gender": row["gender"],
+                        "is_male": row["gender"] == "male",
                         "accent": row["accents"],
                         "age": row["age"],
-                        "dataset": "common_voice"
+                        "dataset": "common_voice",
                     }
                 )
                 + "\n"

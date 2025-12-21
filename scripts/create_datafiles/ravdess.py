@@ -84,13 +84,13 @@ def get_utt_info(filename):
 
     data = [int(i) - 1 for i in os.path.splitext(filename)[0].split("-")]
     return {
-        "gender": "M" if data[-1] % 2 == 0 else "F",
+        "is_male": True if data[-1] % 2 == 0 else False,
         "utt_emotion": EMOTIONS[data[2]],
         "utt_intensity": INTENSITIES[data[3]],
         "text": STATEMENTS[data[4]],
         "utt_text": STATEMENTS[data[4]].split()[0],
         "utt_repetition": REPETITIONS[data[5]],
-        "dataset": "ravdess"
+        "dataset": "ravdess",
     }
 
 

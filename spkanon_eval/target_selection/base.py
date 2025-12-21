@@ -20,6 +20,11 @@ class BaseSelector:
         has to be selected. Selectors that inherit this class must implement the
         `select_new` method, where a new target is selected for a given utterance.
 
+        `same_source_target` is true when the source and target datasets are the same.
+        The target selector will then check that their IDs differ, to ensure each
+        source is anonymized with a different speaker. This flag is ignored by the
+        FixedSelector.
+
         Gender conversion is optional and can be enabled by setting the
         `gender_conversion` parameter. There are two possible values for this
         parameter:
@@ -34,6 +39,7 @@ class BaseSelector:
         """
         self.cfg = cfg
         self.targets = dict() if cfg.consistent_targets else None
+        self.same_source_target = cfg.same_source_target
         self.target_info = {"speaker_id": get_spk_attr(target_df, "speaker_id")}
 
         # keep only the targets that fulfill the target constraints

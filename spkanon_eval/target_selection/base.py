@@ -44,10 +44,14 @@ class BaseSelector:
 
         # keep only the targets that fulfill the target constraints
         target_constraints = cfg.get("target_constraints", dict())
+        target_mask = torch.ones(
+            self.target_info["speaker_id"].shape[0], dtype=torch.bool
+        )
         for key, value in target_constraints.items():
             mask_func = lambda spk_value: spk_value == value
-            target_mask = get_spk_attr(target_df, key, mask_func)
-            self.target_info["speaker_id"] = self.target_info["speaker_id"][target_mask]
+            target_mask &= get_spk_attr(target_df, key, mask_func)
+
+        self.target_info["speaker_id"] = self.target_info["speaker_id"][target_mask]
 
         # check conversion constraints and store required metadata
         self.conversion_constraints = cfg.get("conversion_constraints", dict())

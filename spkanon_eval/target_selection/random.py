@@ -35,4 +35,5 @@ class RandomSelector(BaseSelector):
             ]
             targets[idx] = sampled_candidate_idx
 
+        targets = self.target_info["speaker_id"][targets]
         return targets

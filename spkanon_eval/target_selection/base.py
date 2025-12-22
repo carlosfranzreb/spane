@@ -39,17 +39,19 @@ class BaseSelector:
         """
         self.cfg = cfg
         self.targets = dict() if cfg.consistent_targets else None
-        self.same_source_target = cfg.same_source_target
+        self.same_source_target = cfg.get("same_source_target", False)
         self.target_info = {"speaker_id": get_spk_attr(target_df, "speaker_id")}
 
         # keep only the targets that fulfill the target constraints
-        for key, value in cfg.target_constraints.items():
+        target_constraints = cfg.get("target_constraints", dict())
+        for key, value in target_constraints.items():
             mask_func = lambda spk_value: spk_value == value
             target_mask = get_spk_attr(target_df, key, mask_func)
             self.target_info["speaker_id"] = self.target_info["speaker_id"][target_mask]
 
         # check conversion constraints and store required metadata
-        for key, value in cfg.conversion_constraints.items():
+        self.conversion_constraints = cfg.get("conversion_constraints", dict())
+        for key, value in self.conversion_constraints.items():
             # check that the value is correct
             if value not in [None, "same", "opposite"]:
                 error = f"Invalid value for the constraint `{key}`"
@@ -60,7 +62,7 @@ class BaseSelector:
             if value is not None:
                 self.target_info[key] = get_spk_attr(target_df, key)
 
-    def select(self, batch: list[Tensor]) -> Tensor:
+    def select(self, batch: dict) -> Tensor:
         """
         Select targets for the speakers in the batch. The batch is the same as the one
         output by the dataset (see `spkanon_eval.datamodules.dataset`).
@@ -69,27 +71,27 @@ class BaseSelector:
         across the utterances of each speaker.
         """
 
-        n_utts = batch[self.config.input.feats].shape[0]
-        device = batch[self.config.input.feats].device
-        source = batch[self.config.input.source].to("cpu")
+        n_utts = batch["source"].shape[0]
+        device = batch["source"].device
+        source = batch["source"].to(device)
 
         # if speaker consistency is disabled, select new targets and return them
         if self.targets is None:
-            indices = torch.arange(n_utts)
-            return self.select_new(indices, batch)
+            mask = torch.ones_like(source, dtype=torch.bool, device=device)
+            return self.select_new(mask, batch)
 
         # find the unique source speakers in the batch
-        new_sources = list()
-        new_source_indices = list()
+        src_mask = torch.zeros_like(source, dtype=torch.bool, device=device)
+        added_source_spk = list()
         for idx, src in enumerate(source):
             src = src.item()
-            if src not in self.targets and src not in new_sources:
-                new_sources.append(src)
-                new_source_indices.append(idx)
+            if src not in self.targets and src not in added_source_spk:
+                src_mask[idx] = True
+                added_source_spk.append(src)
 
         # select new targets for the new unique source speakers
-        if len(new_sources) > 0:
-            new_targets = self.select_new(new_source_indices, batch)
+        if torch.sum(src_mask) > 0:
+            new_targets = self.select_new(src_mask, batch)
 
         # create the output targets and store the assignments if needed
         target = torch.ones(n_utts, dtype=torch.int64, device=device)
@@ -98,7 +100,7 @@ class BaseSelector:
             if src in self.targets:
                 target[idx] = self.targets[src]
             else:
-                target[idx] = new_targets[new_sources.index(src)]
+                target[idx] = new_targets[added_source_spk.index(src)]
                 self.targets[src] = target[idx].item()
 
         return target
@@ -106,7 +108,8 @@ class BaseSelector:
     def select_new(self, indices: Tensor, batch: list[Tensor]) -> Tensor:
         """
         Select a new target speaker style vector for the batch speakers of the given
-        indices.
+        indices. `input_cfg` refers the component's configuration named "input", where
+        the input names for the component are defined.
         """
         raise NotImplementedError
 

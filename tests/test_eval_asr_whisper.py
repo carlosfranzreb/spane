@@ -88,11 +88,11 @@ class TestEvalWhisper(unittest.TestCase):
         Test the analysis output:
 
         - `all.txt` should contain the avg. WER of all samples.
-        - `gender.txt` should contain the avg. WER per gender.
+        - `is_male.txt` should contain the avg. WER per gender.
         """
 
         # ensure that the correct number of files is created
-        self.assertEqual(len(os.listdir(self.results_dir)), 3)
+        self.assertEqual(len(os.listdir(self.results_dir)), 4)
 
         # if the analysis has not been run, run it
         if len(self.wers) == 0:
@@ -108,9 +108,9 @@ class TestEvalWhisper(unittest.TestCase):
 
         # check the content of the `gender.txt` file
         with open(self.datafile) as f:
-            sample_genders = [json.loads(line)["gender"] for line in f]
+            sample_genders = [json.loads(line)["is_male"] for line in f]
 
-        with open(os.path.join(self.results_dir, "gender.txt")) as f:
+        with open(os.path.join(self.results_dir, "is_male.txt")) as f:
             gender_results = [line.split() for line in f.readlines()]
 
         self.assertEqual(len(gender_results) - 1, len(set(sample_genders)))
@@ -119,8 +119,8 @@ class TestEvalWhisper(unittest.TestCase):
             gender = line[1]
             computed_wer = float(line[-1])
             true_wers = [
-                self.wers[idx] * (sample_genders[idx] == gender)
+                self.wers[idx] * (sample_genders[idx] == bool(gender))
                 for idx in range(len(self.wers))
             ]
-            true_wer = sum(true_wers) / sum([g == gender for g in sample_genders])
+            true_wer = sum(true_wers) / sum([g == bool(gender) for g in sample_genders])
             self.assertAlmostEqual(computed_wer, true_wer, places=1)

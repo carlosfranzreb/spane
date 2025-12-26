@@ -85,7 +85,7 @@ class TestAsvAnalysis(unittest.TestCase):
         enrolls_gender = spk_is_male[enrolls_gender]
 
         # check the inter-variability analysis
-        eer_file = os.path.join(self.exp_folder, "results", "eer_gender_inter.txt")
+        eer_file = os.path.join(self.exp_folder, "results", "eer_is_male_inter.txt")
         self.assertTrue(os.path.exists(eer_file))
 
         results = dict()
@@ -93,7 +93,7 @@ class TestAsvAnalysis(unittest.TestCase):
             gender, n_pairs, t, eer = line.split()
             results[gender] = [int(n_pairs), float(t), float(eer)]
 
-        for gender_str, gender_bool in zip(["F", "M"], [False, True]):
+        for gender_str, gender_bool in zip(["False", "True"], [False, True]):
             indices = np.where(trials_gender == gender_bool)[0]
             eer, t = get_eer_and_t(self.scores[indices])
 
@@ -102,13 +102,13 @@ class TestAsvAnalysis(unittest.TestCase):
             self.assertTrue(np.isclose(results[gender_str][2], eer))
 
         # check the intra-variability analysis
-        eer_file = os.path.join(self.exp_folder, "results", "eer_gender_intra.txt")
+        eer_file = os.path.join(self.exp_folder, "results", "eer_is_male_intra.txt")
         self.assertTrue(os.path.exists(eer_file))
 
         f_lines = open(eer_file).readlines()
         self.assertTrue(len(f_lines) == 2)  # there is only 1 male; cannot be evaluated
         gender, n_pairs, t, eer = f_lines[1].strip().split()
-        self.assertTrue(gender == "F")
+        self.assertTrue(gender == "False")
 
         indices = np.where(
             np.logical_and(trials_gender == False, enrolls_gender == False)

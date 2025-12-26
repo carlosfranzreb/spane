@@ -8,6 +8,7 @@ import logging
 from copy import deepcopy
 
 import torch
+from torch import Tensor
 from torch.nn.utils.rnn import pad_sequence
 import torchaudio
 from torchaudio.transforms import Resample
@@ -35,20 +36,31 @@ class EmotionEvaluator(InferComponent, EvalComponent):
         self.model = EmotionModel.from_pretrained(config.init).to(device)
         self.model.eval()
 
-    def to(self, device):
+    def to(self, device: str):
         self.device = device
         self.model.to(device)
 
-    def run(self, batch):
+    def run(self, batch: list) -> tuple[Tensor, Tensor]:
         """
         Return the emotion dimensions for the batch. Each sample is given a 3D vector
         that defines its arousal, dominance and valence.
         """
-        y = self.processor(batch[0].cpu().numpy(), sampling_rate=SAMPLE_RATE)
-        y = torch.tensor(y["input_values"]).to(self.device)
-        return self.model(y)
 
-    def train(self, exp_folder, datafiles):
+        # ensure 'is_batched=True' for sample-wise normalization
+        unpadded_audios = [
+            x[: batch[2][idx]] for idx, x in enumerate(batch[0].cpu().numpy())
+        ]
+        inputs = self.processor(
+            unpadded_audios,
+            sampling_rate=SAMPLE_RATE,
+            padding=True,
+            return_tensors="pt",
+        ).to(self.device)
+
+        output = self.model(inputs.input_values, inputs.attention_mask, batch[2])
+        return output
+
+    def train(self, exp_folder: str, datafile: str):
         raise NotImplementedError
 
     def eval_dir(self, exp_folder: str, datafile: str, is_baseline: bool) -> None:

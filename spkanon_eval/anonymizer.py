@@ -1,3 +1,4 @@
+import os
 import logging
 
 import torch
@@ -33,7 +34,8 @@ class Anonymizer:
         target_selection_cfg = config.get("target_selection", None)
         if target_selection_cfg is not None:
 
-            args = [target_selection_cfg]
+            target_df = os.path.join(self.log_dir, "data", "targets.txt")
+            args = [target_selection_cfg, target_df]
             if hasattr(target_selection_cfg, "extra_args"):
                 for arg in target_selection_cfg.extra_args:
                     args.append(getattr(self, arg))

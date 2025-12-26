@@ -1,15 +1,17 @@
 """Model classes used by the SER model."""
 
 import torch
-import torch.nn as nn
+from torch import Tensor, nn
 from transformers.models.wav2vec2.modeling_wav2vec2 import (
     Wav2Vec2Model,
     Wav2Vec2PreTrainedModel,
 )
 
+from spkanon_eval.utils import make_pad_mask
+
 
 class RegressionHead(nn.Module):
-    r"""Classification head."""
+    """Classification head."""
 
     def __init__(self, config):
 
@@ -32,7 +34,7 @@ class RegressionHead(nn.Module):
 
 
 class EmotionModel(Wav2Vec2PreTrainedModel):
-    r"""Speech emotion classifier."""
+    """Speech emotion classifier."""
 
     def __init__(self, config):
 
@@ -44,12 +46,18 @@ class EmotionModel(Wav2Vec2PreTrainedModel):
         self.init_weights()
 
     def forward(
-        self, input_values,
-    ):
+        self, input_values: Tensor, attn_mask: Tensor, audio_lens: Tensor
+    ) -> tuple[Tensor, Tensor]:
 
-        outputs = self.wav2vec2(input_values)
+        outputs = self.wav2vec2(input_values, attn_mask)
         hidden_states = outputs[0]
-        hidden_states = torch.mean(hidden_states, dim=1)
+
+        # get the feature lens
+        feat_lens = self.wav2vec2._get_feat_extract_output_lengths(audio_lens)
+        feat_mask = make_pad_mask(feat_lens).squeeze(1)
+
+        hidden_states[feat_mask] = float("nan")
+        hidden_states = torch.nanmean(hidden_states, dim=1)
         logits = self.classifier(hidden_states)
 
         return hidden_states, logits

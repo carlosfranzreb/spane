@@ -41,13 +41,13 @@ class TestEvalASVCos(BaseTestClass):
         self.init_config.log_dir = os.path.join(self.init_config.log_dir, "asv_test")
         config = run_pipeline(self.init_config)
 
-        # assert that 7 files were created:
-        #   eer, eer_gender_intra, eer_gender_inter, eer_target_intra, eer_target_inter
+        # assert that 9 files were created:
+        #   eer, inter- and intra-EER for is_male, fav_color and target,
         #   eer_speaker, spk_identifiability
         results_subdir = "eval/asv-cos/ignorant/results"
         results_dir = os.path.join(config.exp_folder, results_subdir)
         results_files = [f for f in os.listdir(results_dir) if f.endswith(".txt")]
-        self.assertEqual(len(results_files), 7)
+        self.assertEqual(len(results_files), 9)
 
         # check the overall results
         with open(os.path.join(results_dir, "eer.txt")) as f:

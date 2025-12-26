@@ -33,7 +33,6 @@ class Anonymizer:
         # if there is a target selection algorithm, pass it to the right component
         target_selection_cfg = config.get("target_selection", None)
         if target_selection_cfg is not None:
-
             target_df = os.path.join(self.log_dir, "data", "targets.txt")
             args = [target_selection_cfg, target_df]
             if hasattr(target_selection_cfg, "extra_args"):

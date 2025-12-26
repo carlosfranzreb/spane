@@ -14,7 +14,6 @@ class RegressionHead(nn.Module):
     """Classification head."""
 
     def __init__(self, config):
-
         super().__init__()
 
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
@@ -22,7 +21,6 @@ class RegressionHead(nn.Module):
         self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
     def forward(self, features, **kwargs):
-
         x = features
         x = self.dropout(x)
         x = self.dense(x)
@@ -37,7 +35,6 @@ class EmotionModel(Wav2Vec2PreTrainedModel):
     """Speech emotion classifier."""
 
     def __init__(self, config):
-
         super().__init__(config)
 
         self.config = config
@@ -48,7 +45,6 @@ class EmotionModel(Wav2Vec2PreTrainedModel):
     def forward(
         self, input_values: Tensor, attn_mask: Tensor, audio_lens: Tensor
     ) -> tuple[Tensor, Tensor]:
-
         outputs = self.wav2vec2(input_values, attn_mask)
         hidden_states = outputs[0]
 

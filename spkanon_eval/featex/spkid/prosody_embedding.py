@@ -18,7 +18,6 @@ LOGGER = logging.getLogger("progress")
 
 
 class ProsodyEmbedding(InferComponent):
-
     def __init__(self, config: DictConfig, device: str) -> None:
         """
         Initialize the prosody embedding model with the given configuration from ecapa.yaml
@@ -74,7 +73,6 @@ class ProsodyEmbedding(InferComponent):
 
     # approximation of the voiced segments based on f0
     def pitch_and_intensity_contour_segmentation_based_on_pitch(self, sound):
-
         # create pitch contour for the whole audio
         global_pitch_contour = sound.to_pitch_ac(
             pitch_floor=self.pitch_floor,
@@ -185,7 +183,6 @@ class ProsodyEmbedding(InferComponent):
     # segment audio in 3 equal parts with the last segment being the whole utterance based on the paper "Timing Levels in Segment-Based Speech Emotion Recognition"
     # Global Relative Time Intervals Approach is used
     def segment_audio(self, audio):
-
         # calculate the total length of the audio
         audio_data = audio.values[0]
         total_length = len(audio_data)
@@ -338,7 +335,6 @@ class ProsodyEmbedding(InferComponent):
 
         @staticmethod
         def duration_tilt(values):
-
             voiced_indices = np.where(values > 0)[0]
             if len(voiced_indices) == 0:
                 return 0.0

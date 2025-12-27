@@ -12,7 +12,6 @@ LOGGER = logging.getLogger("progress")
 
 
 class ProsodyEmbeddingOrange(InferComponent):
-
     def __init__(self, config: DictConfig, device: str):
         self.emb_model = EmbeddingsModel.from_pretrained("Orange/Speaker-wavLM-pro")
         self.emb_model.eval()

@@ -12,7 +12,7 @@ LOGGER = logging.getLogger("progress")
 
 
 class Anonymizer:
-    def __init__(self, config: DictConfig, log_dir: str) -> None:
+    def __init__(self, config: DictConfig, log_dir: str):
         """Initialize the components and optionally the target selection algorithm."""
         super().__init__()
         self.config = config
@@ -125,7 +125,7 @@ class Anonymizer:
             if hasattr(component, "target_selection"):
                 return component.target_selection.get_consistent_targets()
 
-    def set_consistent_targets(self, consistent_targets: bool) -> None:
+    def set_consistent_targets(self, consistent_targets: bool):
         """
         Set whether the selected targets should be consistent. We assume that targets
         are selected in the `featproc` module, and iterate over its components looking
@@ -139,7 +139,7 @@ class Anonymizer:
                 LOGGER.info(f"Set consistent targets of {name} to {consistent_targets}")
                 component.target_selection.set_consistent_targets(consistent_targets)
 
-    def to(self, device: str) -> None:
+    def to(self, device: str):
         """
         Overwrite of PyTorch's method, to propagate it to all components.
         """
@@ -151,7 +151,7 @@ class Anonymizer:
         self.synthesis.to(device)
         self.device = device
 
-    def reset(self) -> None:
+    def reset(self):
         """
         Propagate reset() to all the components that have it. This is used to recover
         from an OOM error, as some components may keep some CUDA memory allocated,

@@ -20,7 +20,7 @@ from spkanon_eval.evaluate import SAMPLE_RATE
 from spkanon_eval.evaluation.ser.model_utils import EmotionModel
 from spkanon_eval.evaluation.ser.analysis_utils import analyse_func, headers_func
 from spkanon_eval.evaluation.analysis import analyse_results
-from spkanon_eval.datamodules import eval_dataloader
+from spkanon_eval.datamodules import eval_dataloader, AudioBatch
 from spkanon_eval.component_definitions import InferComponent, EvalComponent
 
 
@@ -40,7 +40,7 @@ class EmotionEvaluator(InferComponent, EvalComponent):
         self.device = device
         self.model.to(device)
 
-    def run(self, batch: list) -> tuple[Tensor, Tensor]:
+    def run(self, batch: AudioBatch) -> tuple[Tensor, Tensor]:
         """
         Return the emotion dimensions for the batch. Each sample is given a 3D vector
         that defines its arousal, dominance and valence.
@@ -48,7 +48,7 @@ class EmotionEvaluator(InferComponent, EvalComponent):
 
         # ensure 'is_batched=True' for sample-wise normalization
         unpadded_audios = [
-            x[: batch[2][idx]] for idx, x in enumerate(batch[0].cpu().numpy())
+            x[: batch.lens[idx]] for idx, x in enumerate(batch.audios.cpu().numpy())
         ]
         inputs = self.processor(
             unpadded_audios,
@@ -57,7 +57,7 @@ class EmotionEvaluator(InferComponent, EvalComponent):
             return_tensors="pt",
         ).to(self.device)
 
-        output = self.model(inputs.input_values, inputs.attention_mask, batch[2])
+        output = self.model(inputs.input_values, inputs.attention_mask, batch.lens)
         return output
 
     def train(self, exp_folder: str, datafile: str):
@@ -98,21 +98,20 @@ class EmotionEvaluator(InferComponent, EvalComponent):
 
         dl_config = deepcopy(self.config.data.config)
         dl_config.max_ratio = 0.05
-        for batch, sample_data in tqdm(
+        for batch in tqdm(
             eval_dataloader(dl_config, datafile, self),
             desc="Evaluating emotional samples",
         ):
             # compute the emotion dimensions for the batch
             embs_y, dims_y = self.run(batch)
-            del batch
             embs_y = embs_y.cpu()
             dims_y = dims_y.cpu()
 
             # if we are evaluating the baseline, dump the dims and continue
             if is_baseline:
                 with open(dump_file, "a") as f:
-                    for i in range(len(sample_data)):
-                        f.write(f"{sample_data[i]['path']} ")
+                    for i in range(len(batch.metadata)):
+                        f.write(f"{batch.metadata[i]['path']} ")
                         for j in range(len(dims)):
                             f.write(f"{dims_y[i][j]} ")
                         f.write("\n")
@@ -120,18 +119,25 @@ class EmotionEvaluator(InferComponent, EvalComponent):
 
             # compute the emotion dimensions of the original audio
             audios_x = list()
-            for s in sample_data:
+            audio_lens = list()
+            for s in batch.metadata:
                 f_anon = s["path"]
                 anon_folder_end = f_anon.index("/results/eval")
                 anon_folder = f_anon[:anon_folder_end] + "/results/eval"
                 f_orig = f_anon.replace(anon_folder, self.config.root_folder)
                 audio, sr = torchaudio.load(f_orig)
-                audios_x.append(audio.squeeze())
+                audio = audio.squeeze()
+                audios_x.append(audio)
+                audio_lens.append(audio.shape[0])
 
             if sr != SAMPLE_RATE:
                 audios_x = Resample(sr, SAMPLE_RATE)(audios_x)
 
-            batch_x = [pad_sequence(audios_x, batch_first=True)]
+            batch_x = AudioBatch(
+                pad_sequence(audios_x, batch_first=True),
+                batch.spkids,
+                torch.tensor(audio_lens),
+            )
             embs_x, dims_x = self.run(batch_x)
             embs_x = embs_x.cpu()
             dims_x = dims_x.cpu()
@@ -142,9 +148,9 @@ class EmotionEvaluator(InferComponent, EvalComponent):
 
             # write the results to the dump file
             with open(dump_file, "a") as f:
-                for i in range(len(sample_data)):
+                for i in range(len(batch.metadata)):
                     # write the audio filepath and the embedding cosine similarity
-                    f.write(f"{sample_data[i]['path']} {similarity[i]} ")
+                    f.write(f"{batch.metadata[i]['path']} {similarity[i]} ")
                     for j in range(len(dims)):  # predicted dimensions
                         f.write(f"{dims_y[i][j]} ")
                     for j in range(len(dims)):  # difference with original

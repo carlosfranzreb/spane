@@ -6,6 +6,7 @@ where the audio is resampled to the given sampling rate.
 
 import json
 import logging
+from dataclasses import dataclass
 
 from torch import Tensor, tensor
 from torch.utils.data import Dataset
@@ -16,8 +17,50 @@ import torchaudio
 LOGGER = logging.getLogger("progress")
 
 
+@dataclass
+class AudioBatch:
+    """
+    A batch container for audio data and associated metadata.
+    Attributes:
+        audios: A tensor containing audio waveforms or features.
+        spkids: A tensor containing speaker identifiers for each audio.
+        lens: A tensor containing the lengths of each audio in the batch.
+        metadata (optional): JSON object from the datafile corresponding to each audio.
+    """
+
+    audios: Tensor
+    spkids: Tensor
+    lens: Tensor
+    metadata: list[dict] = None
+
+    def __getitem__(self, idx: int) -> "AudioBatch":
+        """Return the element at the given index from each tensor and list."""
+        return AudioBatch(
+            audios=self.audios[idx],
+            spkids=self.spkids[idx],
+            lens=self.lens[idx],
+            metadata=self.metadata[idx] if self.metadata else None,
+        )
+
+    def to(self, device: str) -> "AudioBatch":
+        return AudioBatch(
+            audios=self.audios.to(device),
+            spkids=self.spkids.to(device),
+            lens=self.lens.to(device),
+            metadata=self.metadata,
+        )
+
+    @property
+    def n_audios(self) -> int:
+        return self.audios.shape[0]
+
+    @property
+    def max_samples(self) -> int:
+        return self.audios.shape[1]
+
+
 class SpeakerIdDataset(Dataset):
-    def __init__(self, datafile: str, sample_rate: int, chunk_sizes: dict) -> None:
+    def __init__(self, datafile: str, sample_rate: int, chunk_sizes: dict):
         """
         Create a dataset from the given datafile. The datafile should be a text file,
         comprising one JSON object per line. Each JSON object should have at least the
@@ -56,14 +99,14 @@ class SpeakerIdDataset(Dataset):
     def __len__(self) -> int:
         return len(self.data)
 
-    def __getitem__(self, batch_idx: int) -> tuple[Tensor, Tensor, Tensor]:
+    def __getitem__(self, batch_idx: int) -> AudioBatch:
         """Return the `batch_idx`-th batch of the dataset."""
         objs = self.data[batch_idx]
         audios = [load_audio(obj["path"], self.sample_rate) for obj in objs]
         speaker_ids = tensor([int(obj["speaker_id"]) for obj in objs])
         audio_lens = tensor([audio.shape[0] for audio in audios])
         audios = pad_sequence(audios, batch_first=True)
-        return audios, speaker_ids, audio_lens
+        return AudioBatch(audios, speaker_ids, audio_lens)
 
 
 def load_audio(audio_path: str, sample_rate: int) -> Tensor:

@@ -39,28 +39,29 @@ class TestEvalDataloader(unittest.TestCase):
         dl = eval_dataloader(self.config, self.datafile, self.model)
         samples = open(self.datafile).readlines()
 
-        for batch, data in dl:
-            batch_size = batch[0].shape[0]
+        for batch in dl:
+            batch_size = batch.audios.shape[0]
             objs = list()
             for _ in range(batch_size):
                 objs.append(json.loads(samples.pop(0)))
 
-            self.assertEqual(len(batch), 3)  # audio, speakers, lengths
-            for i in range(batch_size):
-                obj = objs[i]
+            for idx in range(batch_size):
+                obj = objs[idx]
                 audio_true, sr = torchaudio.load(obj["path"])
-                sample_data = data[i]
+                sample_data = batch.metadata[idx]
                 if sr != self.config.sample_rate_in:
                     resampler = torchaudio.transforms.Resample(
                         orig_freq=sr, new_freq=self.config.sample_rate_in
                     )
                     audio_true = resampler(audio_true)
-                self.assertTrue(audio_true.shape[1] <= batch[0][i].shape[0])
+                self.assertTrue(audio_true.shape[1] <= batch.audios[idx].shape[0])
                 self.assertTrue(
-                    torch.allclose(audio_true, batch[0][i, : audio_true.shape[1]])
+                    torch.allclose(audio_true, batch.audios[idx, : audio_true.shape[1]])
                 )
-                self.assertTrue(torch.sum(batch[0][i, audio_true.shape[1] :]) == 0)
-                self.assertEqual(audio_true.shape[1], batch[2][i])
+                self.assertTrue(
+                    torch.sum(batch.audios[idx, audio_true.shape[1] :]) == 0
+                )
+                self.assertEqual(audio_true.shape[1], batch.lens[idx])
 
                 # check metadata
                 for key in obj.keys():

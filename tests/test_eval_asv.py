@@ -217,11 +217,11 @@ class TestEvalASV(BaseTestClass):
 
         spkid_config = copy.deepcopy(config.data.config)
         spkid_config.sample_rate = EVAL_SR
-        dl = setup_dataloader(spkid_model, spkid_config, anon_train_file)
+        dl = setup_dataloader(spkid_config, anon_train_file, spkid_model)
         for batch in dl:
             new_vecs = spkid_model.run(batch).detach().cpu().numpy()
             vecs = new_vecs if vecs is None else np.vstack([vecs, new_vecs])
-            new_labels = batch[1].detach().cpu().numpy()
+            new_labels = batch.spkids.detach().cpu().numpy()
             labels = np.concatenate([labels, new_labels])
         vecs -= np.mean(vecs, axis=0)
 

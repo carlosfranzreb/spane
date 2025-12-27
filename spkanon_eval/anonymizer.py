@@ -6,7 +6,7 @@ from torch import Tensor
 from omegaconf import DictConfig
 
 from spkanon_eval.setup_module import setup
-
+from spkanon_eval.datamodules import AudioBatch
 
 LOGGER = logging.getLogger("progress")
 
@@ -50,7 +50,7 @@ class Anonymizer:
                         component.init_target_selection(*args)
                         return
 
-    def get_feats(self, batch: list, source_is_male: Tensor) -> dict:
+    def get_feats(self, batch: AudioBatch, source_is_male: Tensor) -> dict:
         """
         Run the featex, featproc and featfusion modules. Returns anonymized features and
         targets. Sources refer to the input speaker, and targets to the output speaker.
@@ -59,9 +59,9 @@ class Anonymizer:
         if self.featex is not None:
             out = self._run_module(self.featex, batch)
         else:
-            out = {"audio": batch[0], "n_samples": batch[2]}
+            out = {"audio": batch.audios, "n_samples": batch.lens}
 
-        out["source"] = batch[1]
+        out["source"] = batch.spkids
         out["source_is_male"] = source_is_male
         if self.featproc is not None:
             processed = self._run_module(self.featproc, out)
@@ -75,14 +75,16 @@ class Anonymizer:
             out = self.featfusion.run(out)
         return out
 
-    def forward(self, batch: list, data: list) -> tuple[Tensor, Tensor, Tensor]:
+    def forward(self, batch: AudioBatch) -> tuple[Tensor, Tensor, Tensor]:
         """Returns anonymized speech, item lengths and targets."""
-        if "gender" in data[0]:
+        if "gender" in batch.metadata[0]:
             source_is_male = torch.tensor(
-                [d["gender"] == "M" for d in data], dtype=torch.bool, device=self.device
+                [d["gender"] == "M" for d in batch.metadata],
+                dtype=torch.bool,
+                device=self.device,
             )
         else:
-            source_is_male = torch.zeros_like(batch[1], dtype=torch.bool)
+            source_is_male = torch.zeros_like(batch.spkids, dtype=torch.bool)
 
         with torch.no_grad():
             out = self.get_feats(batch, source_is_male)
@@ -96,7 +98,7 @@ class Anonymizer:
 
         return audios, audio_lens, target
 
-    def _run_module(self, module: dict, batch: list) -> dict:
+    def _run_module(self, module: dict, batch: AudioBatch | dict) -> dict:
         """
         Run each component of the module with the given batch. The outputs are stored
         in a dictionary. If the output of a component is a dictionary, its keys are

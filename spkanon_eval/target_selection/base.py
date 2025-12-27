@@ -109,7 +109,7 @@ class BaseSelector:
 
         return target
 
-    def select_new(self, indices: Tensor, batch: list[Tensor]) -> Tensor:
+    def select_new(self, indices: Tensor, batch: dict) -> Tensor:
         """
         Select a new target speaker style vector for the batch speakers of the given
         indices. `input_cfg` refers the component's configuration named "input", where

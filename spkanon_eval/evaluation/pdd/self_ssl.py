@@ -20,7 +20,7 @@ from omegaconf import DictConfig
 from spkanon_eval.evaluate import SAMPLE_RATE
 from spkanon_eval.evaluation.pdd.analysis_utils import analyse_func, headers_func
 from spkanon_eval.evaluation.analysis import analyse_results
-from spkanon_eval.datamodules import eval_dataloader
+from spkanon_eval.datamodules import eval_dataloader, AudioBatch
 from spkanon_eval.component_definitions import InferComponent, EvalComponent
 
 from .model import PdDetector
@@ -41,8 +41,8 @@ class PdEvaluator(InferComponent, EvalComponent):
         self.model.to(device)
 
     @torch.inference_mode()
-    def run(self, batch: list[Tensor], folds: Tensor = None) -> Tensor:
-        return self.model(batch[0], batch[2], folds)
+    def run(self, batch: AudioBatch, folds: Tensor = None) -> Tensor:
+        return self.model(batch.audios, batch.lens, folds)
 
     def train(self, exp_folder, datafiles):
         raise NotImplementedError
@@ -67,15 +67,13 @@ class PdEvaluator(InferComponent, EvalComponent):
         with open(dump_file, "w", encoding="utf-8") as f:
             f.write("path label hc_p pd_p\n")
 
-        for batch, sample_data in tqdm(
-            eval_dataloader(self.config.data.config, datafile, self)
-        ):
-            folds = torch.tensor([d["fold"] for d in sample_data])
+        for batch in tqdm(eval_dataloader(self.config.data.config, datafile, self)):
+            folds = torch.tensor([d["fold"] for d in batch.metadata])
             batch_out = self.run(batch, folds)
             batch_preds = batch_out.argmax(dim=1)
             for idx, pred in enumerate(batch_preds):  # iterate through the batch
-                audiofile = sample_data[idx]["path"]
-                y.append(sample_data[idx]["pd"])
+                audiofile = batch.metadata[idx]["path"]
+                y.append(batch.metadata[idx]["pd"])
                 x.append(pred.item())
 
                 # dump the results for this sample into the dump file

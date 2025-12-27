@@ -7,6 +7,8 @@ from torch.nn.utils.rnn import pad_sequence
 from omegaconf import OmegaConf
 
 from spkanon_eval.evaluation import EmotionEvaluator
+from spkanon_eval.datamodules import AudioBatch
+
 from base import BaseTestClass, run_pipeline
 
 
@@ -56,7 +58,7 @@ class TestEvalSer(BaseTestClass):
         spkid = torch.tensor([0, 0, 0, 0])
         audios = [torch.randn(len) - 0.2 for len in lens]
         audios_batch = pad_sequence(audios, batch_first=True)
-        batch = [audios_batch, spkid, lens]
+        batch = AudioBatch(audios_batch, spkid, lens)
 
         # init the model and run the batch
         config = OmegaConf.create(
@@ -71,11 +73,11 @@ class TestEvalSer(BaseTestClass):
         # run the audios one by one
         single_out = list()
         for idx in range(len(audios)):
-            single_batch = [
+            single_batch = AudioBatch(
                 audios[idx].unsqueeze(0),
                 spkid[idx : idx + 1],
                 lens[idx : idx + 1],
-            ]
+            )
             single_out.append(evaluator.run(single_batch)[0].squeeze(0))
 
         # compare the two outputs

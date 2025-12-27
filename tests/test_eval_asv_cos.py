@@ -96,7 +96,7 @@ class TestEvalASVCos(BaseTestClass):
         speakers = {"trials": None, "enrolls": None}
         for key in vecs:
             df = os.path.join(config.exp_folder, "data", f"eval_{key}.txt")
-            dl = setup_dataloader(spkid_model, df_cfg, df)
+            dl = setup_dataloader(df_cfg, df, spkid_model)
             for batch in dl:
                 batch_vecs = spkid_model.run(batch).detach().cpu().numpy()
                 vecs[key] = (
@@ -105,9 +105,9 @@ class TestEvalASVCos(BaseTestClass):
                     else batch_vecs
                 )
                 speakers[key] = (
-                    np.concatenate((speakers[key], batch[1]), axis=0)
+                    np.concatenate((speakers[key], batch.spkids), axis=0)
                     if speakers[key] is not None
-                    else batch[1]
+                    else batch.spkids
                 )
             self.assertEqual(len(vecs[key]), len(open(df).readlines()))
 

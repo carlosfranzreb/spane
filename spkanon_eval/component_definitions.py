@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 
 from omegaconf import DictConfig
 
+from spkanon_eval.datamodules import AudioBatch
+
 
 class Component(ABC):
     @abstractmethod
@@ -11,7 +13,7 @@ class Component(ABC):
 
 class InferComponent(Component):
     @abstractmethod
-    def run(self, batch: list) -> dict:
+    def run(self, batch: AudioBatch | dict) -> dict:
         pass
 
     @abstractmethod

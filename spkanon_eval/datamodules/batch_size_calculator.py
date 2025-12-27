@@ -15,7 +15,6 @@ import torchaudio
 from tqdm import tqdm
 
 from spkanon_eval.utils import reset
-from spkanon_eval.anonymizer import Anonymizer
 
 LOGGER = logging.getLogger("progress")
 SIZE_INCREASE = 8  # min. increase of batch size
@@ -127,7 +126,7 @@ def map_audio_to_dur(audio: torch.Tensor, n_samples: int) -> torch.Tensor:
         return audio.repeat(n_repeats)[:n_samples]
 
 
-def max_batch_size(model: Anonymizer, audio: torch.Tensor, batch_size: int = 1) -> int:
+def max_batch_size(model, audio: torch.Tensor, batch_size: int = 1) -> int:
     """Estimate the max. batch size for the given audio tensor."""
     total_memory = torch.cuda.get_device_properties(0).total_memory
     out_size = 1
@@ -143,7 +142,9 @@ def max_batch_size(model: Anonymizer, audio: torch.Tensor, batch_size: int = 1) 
         torch.cuda.reset_peak_memory_stats()
         try:
             if hasattr(model, "forward"):
-                data = [{"speaker_id": val.item(), "gender": True} for val in batch[1]]
+                data = [
+                    {"speaker_id": val.item(), "gender": True} for val in batch.spkids
+                ]
                 model.forward(batch, data)
             else:
                 with torch.no_grad():

@@ -2,7 +2,6 @@
 Synthesizer that does nothing, to be used in testing.
 """
 
-
 import torch
 
 from spkanon_eval.component_definitions import InferComponent
@@ -19,7 +18,7 @@ class DummySynthesizer(InferComponent):
         self.model = torch.empty(1)
         self.upsampling_rate = 512
 
-    def run(self, batch: list) -> torch.Tensor:
+    def run(self, batch: dict) -> torch.Tensor:
         """
         Return a tensor of random values of shape (batch_size, 1, spec_frames * 512).
         """

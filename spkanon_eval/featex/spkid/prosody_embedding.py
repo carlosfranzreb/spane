@@ -8,8 +8,11 @@ import parselmouth
 import numpy as np
 import logging
 import torch
+from torch import Tensor
 from omegaconf import DictConfig
+
 from spkanon_eval.component_definitions import InferComponent
+from spkanon_eval.datamodules import AudioBatch
 
 LOGGER = logging.getLogger("progress")
 
@@ -35,7 +38,7 @@ class ProsodyEmbedding(InferComponent):
         self.device = device
 
     @torch.inference_mode()
-    def run(self, batch: list[torch.Tensor]) -> torch.Tensor:
+    def run(self, batch: AudioBatch) -> Tensor:
         """
         Return speaker embeddings for the given batch of utterances.
 
@@ -50,7 +53,7 @@ class ProsodyEmbedding(InferComponent):
             (batch_size, embedding_dim).
         """
 
-        waveforms = batch[0].cpu().numpy()
+        waveforms = batch.audios.cpu().numpy()
         embeddings = []
 
         for waveform in waveforms:
@@ -63,7 +66,7 @@ class ProsodyEmbedding(InferComponent):
             embeddings.append(embedding)
 
         embeddings_tensor = torch.tensor(np.array(embeddings), dtype=torch.float32).to(
-            batch[0].device
+            batch.audios.device
         )
         # print(f"output shape: {embeddings_tensor.shape}")
         # print(f"output: {embeddings_tensor}")

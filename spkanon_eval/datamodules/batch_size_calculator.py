@@ -143,7 +143,7 @@ def max_batch_size(model, audio: torch.Tensor, batch_size: int = 1) -> int:
         try:
             if hasattr(model, "forward"):
                 data = [
-                    {"speaker_id": val.item(), "gender": True} for val in batch.spkids
+                    {"speaker_id": val.item(), "is_male": True} for val in batch.spkids
                 ]
                 model.forward(batch, data)
             else:

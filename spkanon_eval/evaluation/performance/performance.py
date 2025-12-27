@@ -157,7 +157,7 @@ def run_gpu(
             torch.ones(batch_size, device=model.device, dtype=torch.int32)
             * audio.shape[0],
         ]
-        data = [{"speaker_id": val.item(), "gender": True} for val in batch.spkids]
+        data = [{"speaker_id": val.item(), "is_male": True} for val in batch.spkids]
 
         # warm-up
         for _ in range(10):
@@ -208,7 +208,7 @@ def run_cpu(
         torch.randint(10, [batch_size], device=model.device),
         torch.ones(batch_size, device=model.device, dtype=torch.int32) * audio.shape[0],
     )
-    data = [{"speaker_id": val.item(), "gender": True} for val in batch.spkids]
+    data = [{"speaker_id": val.item(), "is_male": True} for val in batch.spkids]
 
     # warm-up
     for _ in range(10):

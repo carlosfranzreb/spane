@@ -33,9 +33,7 @@ class BaseSelector:
             speaker.
 
         When gender conversion is applied, the gender of the target speakers is
-        required. You can either pass them with `target_is_male`, or pass the target
-        datafile. For the latter, the gender of each target speaker must be defined
-        with the key "gender", and the gender must be either "M" or "F".
+        required. It must be defined in the target datafile with `is_male`.
         """
         self.cfg = cfg
         self.targets = dict() if cfg.consistent_targets else None

@@ -77,13 +77,8 @@ class Anonymizer:
 
     def forward(self, batch: AudioBatch) -> tuple[Tensor, Tensor, Tensor]:
         """Returns anonymized speech, item lengths and targets."""
-        if "gender" in batch.metadata[0]:
-            source_is_male = torch.tensor(
-                [d["gender"] == "M" for d in batch.metadata],
-                dtype=torch.bool,
-                device=self.device,
-            )
-        else:
+        if "is_male" not in batch.metadata[0]:
+            LOGGER.warning(f"Gender is undefined; defaulting to female.")
             source_is_male = torch.zeros_like(batch.spkids, dtype=torch.bool)
 
         with torch.no_grad():

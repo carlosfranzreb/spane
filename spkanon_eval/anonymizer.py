@@ -1,5 +1,6 @@
 import os
 import logging
+import importlib
 
 import torch
 from torch import Tensor
@@ -31,13 +32,12 @@ class Anonymizer:
             self.proc_out = self.featproc.pop("output")
 
         # if there is a target selection algorithm, pass it to the right component
-        target_selection_cfg = config.get("target_selection", None)
-        if target_selection_cfg is not None:
+        tsa_cfg = config.get("target_selection", None)
+        if tsa_cfg is not None:
             target_df = os.path.join(self.log_dir, "data", "targets.txt")
-            args = [target_selection_cfg, target_df]
-            if hasattr(target_selection_cfg, "extra_args"):
-                for arg in target_selection_cfg.extra_args:
-                    args.append(getattr(self, arg))
+            module_str, cls_str = cfg.cls.rsplit(".", 1)
+            module = importlib.import_module(module_str)
+            tsa_cls = getattr(module, cls_str)
 
             for module in [self.featproc, self.synthesis]:
                 if module is None:
@@ -47,7 +47,7 @@ class Anonymizer:
                 for name, component in module.items():
                     if hasattr(component, "target_selection"):
                         LOGGER.info(f"Passing target selection algorithm to {name}")
-                        component.init_target_selection(*args)
+                        component.target_selection = tsa_cls(tsa_cfg, target_df)
                         return
 
     def get_feats(self, batch: AudioBatch, source_is_male: Tensor) -> dict:

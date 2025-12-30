@@ -4,7 +4,25 @@ import inspect
 
 import numpy as np
 import torch
+from torch import Tensor
 from torch.cuda import empty_cache, synchronize, reset_peak_memory_stats
+
+
+def make_pad_mask(lengths: Tensor) -> Tensor:
+    """
+    Input lengths has shape (batch_size) and is of type torch.long
+    Output mask has shape (batch_size, 1, max_features).
+    """
+    bs = lengths.shape[0]
+    maxlen = lengths.max()
+
+    seq_range = torch.arange(0, maxlen, dtype=torch.long, device=lengths.device)
+    seq_range_expand = seq_range.unsqueeze(0).expand(bs, maxlen)
+    seq_length_expand = seq_range_expand.new(lengths).unsqueeze(-1)
+    mask = seq_range_expand >= seq_length_expand
+    mask = mask.unsqueeze(1)
+
+    return mask
 
 
 def reset(model):

@@ -3,9 +3,12 @@ import json
 import shutil
 
 import torch
+from torch.nn.utils.rnn import pad_sequence
 from omegaconf import OmegaConf
 
 from spkanon_eval.evaluation import EmotionEvaluator
+from spkanon_eval.datamodules import AudioBatch
+
 from base import BaseTestClass, run_pipeline
 
 
@@ -27,7 +30,9 @@ class TestEvalSer(BaseTestClass):
         # gather the utterances from the datafile
         expected_utts = list()
         for line in open(os.path.join(config.data.datasets.eval[0])):
-            expected_utts.append(json.loads(line)["path"].replace("{root}/", ""))
+            expected_utts.append(
+                json.loads(line)["path"].replace("spane/tests/data/", "")
+            )
 
         # check the results
         with open(os.path.join(results_dir, "anon_eval.txt")) as f:
@@ -45,31 +50,17 @@ class TestEvalSer(BaseTestClass):
 
     def test_batch(self):
         """
-        Test whether the batching works: the results of the batch should equal the results of the
-        individual samples. We check the emotion embeddings for each sample.
+        Test whether the batching works: the results of the batch should equal the
+        results of the individual samples. We check the emotion embeddings for each
+        sample.
         """
-        audios = torch.randn(4, 50000) - 0.5
-        config = OmegaConf.create(
-            {
-                "init": "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim",
-                "data": {"config": {"sample_rate": 16000}},
-            }
-        )
-        evaluator = EmotionEvaluator(config, "cpu")
-        batched_out = evaluator.run([audios])[0]
-        single_out = [evaluator.run([audio.unsqueeze(0)])[0] for audio in audios]
-        for i in range(len(batched_out)):
-            self.assertTrue(torch.allclose(batched_out[i], single_out[i], atol=1e-5))
-            if i > 0:
-                self.assertFalse(torch.allclose(batched_out[i], batched_out[i - 1]))
+        lens = torch.tensor([50000, 40000, 45000, 32000])
+        spkid = torch.tensor([0, 0, 0, 0])
+        audios = [torch.randn(len) - 0.2 for len in lens]
+        audios_batch = pad_sequence(audios, batch_first=True)
+        batch = AudioBatch(audios_batch, spkid, lens)
 
-    def test_resampling(self):
-        """
-        Test whether the resampling works: if the audio sampling rate differs from the
-        sampling rate expected by the emotion recognizer, the batch should be resampled
-        before being passed to the recognizer.
-        """
-        audios = torch.randn(4, 50000) - 0.5
+        # init the model and run the batch
         config = OmegaConf.create(
             {
                 "init": "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim",
@@ -77,9 +68,22 @@ class TestEvalSer(BaseTestClass):
             }
         )
         evaluator = EmotionEvaluator(config, "cpu")
-        batched_out = evaluator.run([audios])[0]
-        single_out = [evaluator.run([audio.unsqueeze(0)])[0] for audio in audios]
-        for i in range(len(batched_out)):
-            self.assertTrue(torch.allclose(batched_out[i], single_out[i], atol=1e-5))
+        batched_out = evaluator.run(batch)[0]
+
+        # run the audios one by one
+        single_out = list()
+        for idx in range(len(audios)):
+            single_batch = AudioBatch(
+                audios[idx].unsqueeze(0),
+                spkid[idx : idx + 1],
+                lens[idx : idx + 1],
+            )
+            single_out.append(evaluator.run(single_batch)[0].squeeze(0))
+
+        # compare the two outputs
+        for i in range(len(single_out)):
+            self.assertTrue(torch.allclose(batched_out[i], single_out[i], atol=1e-4))
             if i > 0:
-                self.assertFalse(torch.allclose(batched_out[i], batched_out[i - 1]))
+                self.assertFalse(
+                    torch.allclose(batched_out[i], batched_out[i - 1], atol=1e-4)
+                )

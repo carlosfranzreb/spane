@@ -12,6 +12,7 @@ from spkanon_eval.datamodules.dataloader import eval_dataloader
 from spkanon_eval.evaluation.analysis import analyse_results
 from spkanon_eval.featex.asr.whisper_analysis_utils import analyse_func, headers_func
 from spkanon_eval.component_definitions import InferComponent, EvalComponent
+from spkanon_eval.datamodules import AudioBatch
 
 LOGGER = logging.getLogger("progress")
 
@@ -31,7 +32,7 @@ class Whisper(InferComponent, EvalComponent):
         )
 
     @torch.inference_mode()
-    def run(self, batch: list) -> list:
+    def run(self, batch: AudioBatch) -> list:
         """
         1. pad each audio to span 30 seconds: whisper expects log-mel spectrograms
             that span 30 seconds as input
@@ -39,8 +40,8 @@ class Whisper(InferComponent, EvalComponent):
         3. return the predicted text or the encoder output
         """
         mels = list()
-        for i in range(batch[0].shape[0]):  # iterate over waveforms in batch
-            padded = whisper.pad_or_trim(batch[0][i])
+        for idx in range(batch.n_audios):  # iterate over waveforms in batch
+            padded = whisper.pad_or_trim(batch.audios[idx])
             mels.append(
                 whisper.log_mel_spectrogram(padded, self.model.dims.n_mels).unsqueeze(0)
             )
@@ -49,9 +50,9 @@ class Whisper(InferComponent, EvalComponent):
         if self.config.output == "text":
             out = self.model.decode(mels, options=self.options)
             if self.max_chars_div is not None:
-                max_chars = int(batch[0].shape[1] / self.max_chars_div)
+                max_chars = int(batch.max_samples / self.max_chars_div)
             else:
-                max_chars = batch[0].shape[1]
+                max_chars = batch.max_samples
             texts = [decoding.text[:max_chars] for decoding in out]
             return texts
 
@@ -84,14 +85,12 @@ class Whisper(InferComponent, EvalComponent):
         with open(dump_file, "w", encoding="utf-8") as f:
             f.write("path n_edits n_words_ref wer text\n")
 
-        for batch, sample_data in tqdm(
-            eval_dataloader(self.config.data.config, datafile, self)
-        ):
+        for batch in tqdm(eval_dataloader(self.config.data.config, datafile, self)):
             texts_pred = self.run(batch)  # compute the transcriptions for the batch
             for i, text_pred in enumerate(texts_pred):  # iterate through the batch
                 # compute the WER for the current sample
-                audiofile = sample_data[i]["path"]
-                text_ref = sample_data[i]["text"]
+                audiofile = batch.metadata[i]["path"]
+                text_ref = batch.metadata[i]["text"]
                 n_edits, n_words, wer = compute_edits(text_pred, text_ref)
                 # if wer could not be computed, skip
                 if n_words == 0:

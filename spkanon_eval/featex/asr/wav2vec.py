@@ -2,7 +2,9 @@ from speechbrain.lobes.models.huggingface_transformers.wav2vec2 import Wav2Vec2
 from omegaconf import DictConfig
 import torch
 from torch import Tensor
+
 from spkanon_eval.component_definitions import InferComponent
+from spkanon_eval.datamodules import AudioBatch
 
 
 class Wav2Vec(InferComponent):
@@ -13,5 +15,5 @@ class Wav2Vec(InferComponent):
         )
 
     @torch.inference_mode()
-    def run(self, batch: list) -> Tensor:
-        return self.model(batch[0])
+    def run(self, batch: AudioBatch) -> Tensor:
+        return self.model(batch.audios)

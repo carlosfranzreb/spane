@@ -5,7 +5,6 @@ int. Given our use case, we store the speaker ID in the label field. We also sto
 the transcript, which may be used in the evaluation.
 """
 
-
 import os
 import json
 from argparse import ArgumentParser
@@ -31,7 +30,7 @@ def create_file(folder, dump_file, root_folder):
         parts = [p.strip() for p in line.strip().split("|")]
         spk_id, gender, spk_dataset = parts[:3]
         if spk_dataset == dataset and spk_id not in genders:
-            genders[spk_id] = gender
+            genders[spk_id] = gender == "M"
 
     writer = open(dump_file, "w")
     for dirpath, _, filenames in os.walk(folder):
@@ -48,7 +47,7 @@ def create_file(folder, dump_file, root_folder):
                             "text": open(text_file).read(),
                             "duration": audio.shape[1] / sample_rate,
                             "label": spk_id,
-                            "gender": genders[spk_id],
+                            "is_male": genders[spk_id],
                             "dataset": "libritts",
                         }
                     )

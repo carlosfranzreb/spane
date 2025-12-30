@@ -5,6 +5,7 @@ import torchaudio
 from omegaconf import OmegaConf
 
 from spkanon_eval.featex import ProsodyEmbedding
+from spkanon_eval.datamodules import AudioBatch
 
 
 class TestProsodyEmbedding(unittest.TestCase):
@@ -23,11 +24,11 @@ class TestProsodyEmbedding(unittest.TestCase):
             "spane/tests/data/LibriSpeech/dev-clean-2/1988/24833/1988-24833-0000.flac"
         )[0].squeeze()
         audios = torch.stack([audio, audio], dim=0)
-        self.batch = [
+        self.batch = AudioBatch(
             audios,
             torch.tensor([audios.shape[1], audios.shape[1] - 16000], dtype=torch.long),
             torch.tensor([0, 1], dtype=torch.long),
-        ]
+        )
 
     def test_segmentations(self):
         """
@@ -48,13 +49,13 @@ class TestProsodyEmbedding(unittest.TestCase):
 
             # Check output type and device
             self.assertIsInstance(embs, torch.Tensor)
-            self.assertEqual(embs.device, self.batch[0].device)
+            self.assertEqual(embs.device, self.batch.audios.device)
             self.assertEqual(embs.dtype, torch.float32)
 
             # Check that embs are finite, not all zeros and correct dim
             self.assertTrue(torch.all(torch.isfinite(embs)))
             self.assertFalse(torch.allclose(embs, torch.zeros_like(embs)))
-            self.assertEqual(embs.shape[0], len(self.batch[0]))
+            self.assertEqual(embs.shape[0], self.batch.n_audios)
             embeddings[method] = embs
 
         # Test that the segmentations produce embeddings of different shapes

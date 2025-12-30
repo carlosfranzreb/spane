@@ -4,6 +4,7 @@ from omegaconf import OmegaConf, ListConfig
 from .wavlm_model import WavLM, WavLMConfig
 
 from spkanon_eval.component_definitions import InferComponent
+from spkanon_eval.datamodules import AudioBatch
 
 
 class WavlmWrapper(InferComponent):
@@ -27,14 +28,13 @@ class WavlmWrapper(InferComponent):
         self.config = config
 
     @torch.inference_mode()
-    def run(self, batch: list) -> dict:
+    def run(self, batch: AudioBatch) -> dict:
         """
         Pases the batch through the model until the specified layer and returns the
         output of that layer.
 
         Args:
-            batch: a list with a tensor comprising waveforms in first position, and the
-            number of samples per item in the batch in third position.
+            batch: AudioBatch
 
         Returns:
             a dictionary with the output of the specified WavLM layer under the key "feats" and
@@ -43,7 +43,7 @@ class WavlmWrapper(InferComponent):
         with torch.no_grad():
             if isinstance(self.config.layer, ListConfig):
                 last_feats, all_feats = self.model.extract_features(
-                    batch[0],
+                    batch.audios,
                     ret_layer_results=True,
                     output_layer=max(self.config.layer),
                 )[0]
@@ -53,10 +53,10 @@ class WavlmWrapper(InferComponent):
                 out = torch.stack(out)
             else:
                 out = self.model.extract_features(
-                    batch[0], output_layer=self.config.layer
+                    batch.audios, output_layer=self.config.layer
                 )[0]
 
-        n_feats = batch[2] // self.config.hop_length
+        n_feats = batch.lens // self.config.hop_length  # TODO: is this accurate?
         return {"feats": out, "n_feats": n_feats}
 
     def to(self, device: str) -> None:

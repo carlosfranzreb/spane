@@ -14,7 +14,9 @@ class RandomSelector(BaseSelector):
 
         # create the target mask from the conversion constraints
         target_mask = torch.ones(
-            (self.target_info["speaker_id"].shape[0], n_utts), dtype=torch.bool
+            (self.target_info["speaker_id"].shape[0], n_utts),
+            dtype=torch.bool,
+            device=device,
         )
         for key, value in self.conversion_constraints.items():
             if value is None:

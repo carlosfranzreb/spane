@@ -2,10 +2,6 @@
 Self-SSL model for Parkinson's disease detection from
 
 <https://github.com/david-gimeno/interpreting-ssl-parkinson-speech>
-
-TODO:
-
-1. I'm currently evaluating on all of the data, but 4/5ths of it are used for training.
 """
 
 import os
@@ -78,7 +74,8 @@ class PdEvaluator(InferComponent, EvalComponent):
 
                 # dump the results for this sample into the dump file
                 with open(dump_file, "a", encoding="utf-8") as f:
-                    out_str = " ".join(batch_out[idx].tolist())
+                    out = torch.round(batch_out[idx], decimals=2)
+                    out_str = " ".join([str(n.item()) for n in out])
                     f.write(f"{audiofile} {str(int(y[-1]))} {out_str}\n")
 
         analyse_results(

@@ -35,7 +35,7 @@ class Anonymizer:
         tsa_cfg = config.get("target_selection", None)
         if tsa_cfg is not None:
             target_df = os.path.join(self.log_dir, "data", "targets.txt")
-            module_str, cls_str = cfg.cls.rsplit(".", 1)
+            module_str, cls_str = tsa_cfg.cls.rsplit(".", 1)
             module = importlib.import_module(module_str)
             tsa_cls = getattr(module, cls_str)
 
@@ -77,9 +77,12 @@ class Anonymizer:
 
     def forward(self, batch: AudioBatch) -> tuple[Tensor, Tensor, Tensor]:
         """Returns anonymized speech, item lengths and targets."""
-        if "is_male" not in batch.metadata[0]:
+        source_is_male = torch.zeros_like(batch.spkids, dtype=torch.bool)
+        if batch.metadata is None or "is_male" not in batch.metadata[0]:
             LOGGER.warning("Gender is undefined; defaulting to female.")
-            source_is_male = torch.zeros_like(batch.spkids, dtype=torch.bool)
+        else:
+            for idx, spk_data in enumerate(batch.metadata):
+                source_is_male[idx] = spk_data["is_male"]
 
         with torch.no_grad():
             out = self.get_feats(batch, source_is_male)

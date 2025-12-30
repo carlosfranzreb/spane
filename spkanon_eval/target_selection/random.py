@@ -27,7 +27,7 @@ class RandomSelector(BaseSelector):
             target_mask &= new_target_mask
 
         # sample targets
-        targets = torch.zeros(n_utts, dtype=torch.int64, device=device)
+        targets = torch.zeros(n_utts, dtype=torch.int64)
         for idx, source_spkid in enumerate(source):
             candidate_indices = target_mask[:, idx].nonzero().flatten()
             if self.same_source_target:

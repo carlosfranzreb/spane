@@ -9,23 +9,22 @@ class RandomSelector(BaseSelector):
         """Randomly select a target for the given input source_data."""
 
         n_utts = mask.sum()
-        device = batch["source"].device
-        source = batch["source"][mask]
+        source = batch["source"].to("cpu")[mask]
 
         # create the target mask from the conversion constraints
         target_mask = torch.ones(
             (self.target_info["speaker_id"].shape[0], n_utts),
             dtype=torch.bool,
-            device=device,
+            device="cpu",
         )
         for key, value in self.conversion_constraints.items():
             if value is None:
                 continue
 
-            source_info = batch[key].to(device)[mask]
+            source_info = batch[key][mask]
             new_target_mask = get_candidate_target_mask(
                 self.target_info[key], source_info, value
-            ).to(device)
+            )
             target_mask &= new_target_mask
 
         # sample targets

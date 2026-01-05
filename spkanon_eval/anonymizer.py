@@ -50,7 +50,7 @@ class Anonymizer:
                         component.target_selection = tsa_cls(tsa_cfg, target_df)
                         return
 
-    def get_feats(self, batch: AudioBatch, source_is_male: Tensor) -> dict:
+    def get_feats(self, batch: AudioBatch) -> dict:
         """
         Run the featex, featproc and featfusion modules. Returns anonymized features and
         targets. Sources refer to the input speaker, and targets to the output speaker.
@@ -61,8 +61,22 @@ class Anonymizer:
         else:
             out = {"audio": batch.audios, "n_samples": batch.lens}
 
+        # add metadata required by the TSA and remaining components
         out["source"] = batch.spkids
-        out["source_is_male"] = source_is_male
+        for (
+            c_key,
+            c_value,
+        ) in self.config.target_selection.conversion_constraints.items():
+            if c_value is None:
+                continue
+
+            if not batch.metadata or c_key not in batch.metadata[0]:
+                error = f"{c_key} was not found in the batch's metadata"
+                LOGGER.error(error)
+                raise RuntimeError(error)
+
+            out[c_key] = torch.tensor([m[c_key] for m in batch.metadata])
+
         if self.featproc is not None:
             processed = self._run_module(self.featproc, out)
             out_proc = dict()
@@ -71,21 +85,16 @@ class Anonymizer:
             for feat in self.proc_out["featproc"]:
                 out_proc[feat] = processed[feat]
             out = out_proc
+
         if self.featfusion is not None:
             out = self.featfusion.run(out)
+
         return out
 
     def forward(self, batch: AudioBatch) -> tuple[Tensor, Tensor, Tensor]:
         """Returns anonymized speech, item lengths and targets."""
-        source_is_male = torch.zeros_like(batch.spkids, dtype=torch.bool)
-        if batch.metadata is None or "is_male" not in batch.metadata[0]:
-            LOGGER.warning("Gender is undefined; defaulting to female.")
-        else:
-            for idx, spk_data in enumerate(batch.metadata):
-                source_is_male[idx] = spk_data["is_male"]
-
         with torch.no_grad():
-            out = self.get_feats(batch, source_is_male)
+            out = self.get_feats(batch)
             synthesis_out = self.synthesis.run(out)
 
         if len(synthesis_out) == 3:

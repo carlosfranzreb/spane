@@ -62,7 +62,7 @@ class BaseSelector:
 
             # if needed, get the target speaker's values for the key
             if value is not None:
-                self.target_info[key] = get_spk_attr(target_df, key)
+                self.target_info[key] = get_spk_attr(target_df, key)[target_mask]
 
     def select(self, batch: dict) -> Tensor:
         """
@@ -79,11 +79,11 @@ class BaseSelector:
 
         # if speaker consistency is disabled, select new targets and return them
         if self.targets is None:
-            mask = torch.ones_like(source, dtype=torch.bool, device=device)
+            mask = torch.ones_like(source, dtype=torch.bool, device="cpu")
             return self.select_new(mask, batch)
 
-        # find the unique source speakers in the batch
-        src_mask = torch.zeros_like(source, dtype=torch.bool, device=device)
+        # find the unique source speakers in the batch (TODO: test this on GPU)
+        src_mask = torch.zeros_like(source, dtype=torch.bool, device="cpu")
         added_source_spk = list()
         for idx, src in enumerate(source):
             src = src.item()

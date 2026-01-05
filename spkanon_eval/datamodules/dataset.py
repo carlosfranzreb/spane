@@ -94,6 +94,7 @@ class SpeakerIdDataset(Dataset):
             else:
                 data_chunks.append([sample])
                 max_dur_key = min([k for k in chunk_sizes if k > sample["duration"]])
+
         self.data = data_chunks
 
     def __len__(self) -> int:

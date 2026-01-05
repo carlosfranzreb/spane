@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from torch.utils.data import DataLoader
 from omegaconf import DictConfig
 
-from spkanon_eval.datamodules import SpeakerIdDataset, BatchSizeCalculator, AudioBatch
+from spkanon_eval.datamodules import AudioBatch, SpeakerIdDataset, BatchSizeCalculator
 
 LOGGER = logging.getLogger("progress")
 bs_calculator = BatchSizeCalculator()
@@ -27,6 +27,7 @@ def setup_dataloader(config: DictConfig, datafile: str, model) -> DataLoader:
     chunk_sizes = bs_calculator.calculate(
         datafile, model, config.sample_rate_in, max_ratio
     )
+
     return DataLoader(
         dataset=SpeakerIdDataset(datafile, config.sample_rate_in, chunk_sizes),
         num_workers=config.num_workers,

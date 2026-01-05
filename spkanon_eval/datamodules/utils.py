@@ -42,7 +42,6 @@ def prepare_datafile(stage: str, config: OmegaConf, log_dir: str) -> str:
         os.makedirs(os.path.dirname(new_df), exist_ok=True)
 
     prepared_objs = list()
-    n_seen_speakers = 0
     for datafile in datafiles:
         too_short, too_long, included = list(), list(), list()
         speaker_ids = list()
@@ -61,19 +60,17 @@ def prepare_datafile(stage: str, config: OmegaConf, log_dir: str) -> str:
                 spk = datafile + "_" + obj["label"]
                 if spk not in speaker_ids:
                     speaker_ids.append(spk)
-                obj["speaker_id"] = n_seen_speakers + speaker_ids.index(spk)
+                obj["speaker_id"] = speaker_ids.index(spk)
                 prepared_objs.append(obj)
 
-        n_seen_speakers += len(speaker_ids)
-
         LOGGER.info(
-            f"{len(included)} samples included ({round(sum(included) / 3600, 3 )} h)"
+            f"{len(included)} samples included ({round(sum(included) / 3600, 3)} h)"
         )
         LOGGER.info(
-            f"{len(too_short)} samples too short ({round(sum(too_short) / 3600, 3 )} h)"
+            f"{len(too_short)} samples too short ({round(sum(too_short) / 3600, 3)} h)"
         )
         LOGGER.info(
-            f"{len(too_long)} samples too long ({round(sum(too_long) / 3600, 3 )} h)"
+            f"{len(too_long)} samples too long ({round(sum(too_long) / 3600, 3)} h)"
         )
 
     prepared_objs.sort(key=lambda x: x["duration"], reverse=True)

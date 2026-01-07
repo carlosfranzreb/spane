@@ -63,10 +63,10 @@ class Anonymizer:
 
         # add metadata required by the TSA and remaining components
         out["source"] = batch.spkids
-        for (
-            c_key,
-            c_value,
-        ) in self.config.target_selection.conversion_constraints.items():
+        conv_constraints = self.config.target_selection.get(
+            "conversion_constraints", dict()
+        )
+        for c_key, c_value in conv_constraints.items():
             if c_value is None:
                 continue
 

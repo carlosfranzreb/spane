@@ -6,7 +6,6 @@ import torch
 import numpy as np
 from tqdm import tqdm
 from transformers import WhisperForConditionalGeneration, AutoProcessor
-from transformers.feature_extraction_utils import BatchFeature
 import editdistance
 
 from spkanon_eval.datamodules.dataloader import eval_dataloader
@@ -14,7 +13,6 @@ from spkanon_eval.evaluation.analysis import analyse_results
 from spkanon_eval.featex.asr.whisper_analysis_utils import analyse_func, headers_func
 from spkanon_eval.component_definitions import InferComponent, EvalComponent
 from spkanon_eval.datamodules import AudioBatch
-from spkanon_eval.utils import make_pad_mask
 
 LOGGER = logging.getLogger("progress")
 

@@ -10,6 +10,9 @@ from torch.cuda import empty_cache, synchronize, reset_peak_memory_stats
 
 def make_pad_mask(lengths: Tensor) -> Tensor:
     """
+    Returns a pad mask, where padding values are set to one and the audio
+    values are set to zero.
+
     Input lengths has shape (batch_size) and is of type torch.long
     Output mask has shape (batch_size, 1, max_features).
     """

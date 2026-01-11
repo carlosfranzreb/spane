@@ -2,17 +2,19 @@ import os
 import string
 import logging
 
-import whisper
 import torch
-import editdistance
 import numpy as np
 from tqdm import tqdm
+from transformers import WhisperForConditionalGeneration, AutoProcessor
+from transformers.feature_extraction_utils import BatchFeature
+import editdistance
 
 from spkanon_eval.datamodules.dataloader import eval_dataloader
 from spkanon_eval.evaluation.analysis import analyse_results
 from spkanon_eval.featex.asr.whisper_analysis_utils import analyse_func, headers_func
 from spkanon_eval.component_definitions import InferComponent, EvalComponent
 from spkanon_eval.datamodules import AudioBatch
+from spkanon_eval.utils import make_pad_mask
 
 LOGGER = logging.getLogger("progress")
 
@@ -21,43 +23,49 @@ class Whisper(InferComponent, EvalComponent):
     def __init__(self, config, device, **kwargs):
         self.device = device
         self.config = config
-        self.model = whisper.load_model(
-            config.size,
-            download_root="checkpoints/whisper",
-        ).to(device)
-        self.model.eval()
-        self.max_chars_div = self.config.get("max_chars_div", None)
-        self.options = whisper.DecodingOptions(
-            fp16=self.device == "cuda", language=config.language
+        model_id = f"openai/whisper-{config.size}"
+        self.processor = AutoProcessor.from_pretrained(model_id)
+        self.model = WhisperForConditionalGeneration.from_pretrained(
+            model_id, torch_dtype=torch.float16
         )
+        self.model.to(device)
+        self.model.eval()
 
     @torch.inference_mode()
     def run(self, batch: AudioBatch) -> list:
         """
-        1. pad each audio to span 30 seconds: whisper expects log-mel spectrograms
-            that span 30 seconds as input
-        2. compute log-mel spectrograms
-        3. return the predicted text or the encoder output
+        Uses HF's transformers implementation for batch transcription of long-form
+        audio. See <https://github.com/huggingface/transformers/pull/27658>
         """
-        mels = list()
-        for idx in range(batch.n_audios):  # iterate over waveforms in batch
-            padded = whisper.pad_or_trim(batch.audios[idx])
-            mels.append(
-                whisper.log_mel_spectrogram(padded, self.model.dims.n_mels).unsqueeze(0)
-            )
-        mels = torch.cat(mels, dim=0)
 
-        if self.config.output == "text":
-            out = self.model.decode(mels, options=self.options)
-            if self.max_chars_div is not None:
-                max_chars = int(batch.max_samples / self.max_chars_div)
-            else:
-                max_chars = batch.max_samples
-            texts = [decoding.text[:max_chars] for decoding in out]
-            return texts
+        # create input for Whisper
+        inputs = [
+            audio[: batch.lens[idx]]
+            for idx, audio in enumerate(batch.audios.cpu().numpy())
+        ]
+        inputs = self.processor(
+            inputs,
+            return_tensors="pt",
+            truncation=False,
+            padding="longest",
+            return_attention_mask=True,
+            sampling_rate=16_000,
+        )
+        inputs = inputs.to(self.device, torch.float16)
 
-        elif self.config.output == "encoding":
-            return self.model.encoder(mels)
+        # run Whisper
+        result = self.model.generate(
+            **inputs,
+            language=self.config.language,
+            condition_on_prev_tokens=False,
+            temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
+            logprob_threshold=-1.0,
+            compression_ratio_threshold=1.35,
+            return_timestamps=False,
+        )
+        decoded = self.processor.batch_decode(result, skip_special_tokens=True)
+
+        return decoded
 
     def train(self, exp_folder: str) -> None:
         raise NotImplementedError("Whisper wrapper does not support training")
@@ -74,8 +82,6 @@ class Whisper(InferComponent, EvalComponent):
             datafile: datafile to evaluate
         """
         LOGGER.info("Computing WER of eval data with dataloader")
-        if self.config.output != "text":
-            self.config.output = "text"
         dump_folder = os.path.join(exp_folder, "eval", f"whisper-{self.config.size}")
         os.makedirs(dump_folder, exist_ok=True)
         stats = {"n_edits": list(), "n_words_ref": list()}

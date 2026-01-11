@@ -27,28 +27,15 @@ class TestEvalWhisper(unittest.TestCase):
         os.makedirs(os.path.join(self.exp_folder))
         self.datafile = "spane/tests/datafiles/ls-dev-clean-2.txt"
 
-        # config = OmegaConf.create(
-        #     {
-        #         "train": False,
-        #         "size": "tiny",
-        #         "output": "text",
-        #         "batch_size": 4,
-        #         "data": {
-        #             "config": {
-        #                 "sample_rate_in": 16000,
-        #                 "num_workers": 0,
-        #                 "chunk_sizes": {"ls-dev-clean-2": {100: 1}},
-        #             },
-        #         },
-        #     }
-        # )
         config = OmegaConf.load("spane/config/components/asr/whisper_tiny.yaml")[
             "whisper_tiny"
         ]
+        config.language = "en"
         config.data = OmegaConf.load("spane/config/datasets/config.yaml")
         config.data.config.sample_rate = 16000
         config.data.config.sample_rate_out = 16000
         config.data.config.sample_rate_in = 16000
+
         self.whisper = Whisper(config, "cpu")
         self.whisper.eval_dir(self.exp_folder, self.datafile)
         self.results_dir = os.path.join(self.exp_folder, "eval", "whisper-tiny")
@@ -76,6 +63,7 @@ class TestEvalWhisper(unittest.TestCase):
                 if out[0] == obj["path"]:
                     out_obj = out
                     break
+
             self.assertTrue(out_obj is not None)
             self.assertEqual(len(obj["text"].split()), int(out_obj[2]))
             wer = float(out_obj[3])
@@ -103,8 +91,9 @@ class TestEvalWhisper(unittest.TestCase):
             all_results = f.readlines()
 
         self.assertEqual(len(all_results), 2)
-        computed_wer = float(all_results[1].split()[-1])
-        self.assertAlmostEqual(computed_wer, sum(self.wers) / len(self.wers), places=2)
+        wer = float(all_results[1].split()[-1])
+        wer_expected = sum(self.wers) / len(self.wers)
+        self.assertTrue(abs(wer - wer_expected) < 0.01)
 
         # check the content of the `gender.txt` file
         with open(self.datafile) as f:

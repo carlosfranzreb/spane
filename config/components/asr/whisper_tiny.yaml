@@ -1,5 +1,0 @@
-whisper_tiny:
-  cls: spkanon_eval.featex.Whisper
-  size: tiny # can be: tiny, base, small, medium, large
-  output: text # can be text or encoding
-  language: en

@@ -27,9 +27,8 @@ class TestEvalWhisper(unittest.TestCase):
         os.makedirs(os.path.join(self.exp_folder))
         self.datafile = "spane/tests/datafiles/ls-dev-clean-2.txt"
 
-        config = OmegaConf.load("spane/config/components/asr/whisper_tiny.yaml")[
-            "whisper_tiny"
-        ]
+        config = OmegaConf.load("spane/config/components/asr/whisper.yaml")["whisper"]
+        config.size = "tiny"
         config.language = "en"
         config.data = OmegaConf.load("spane/config/datasets/config.yaml")
         config.data.config.sample_rate = 16000

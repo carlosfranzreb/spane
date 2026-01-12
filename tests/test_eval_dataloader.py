@@ -23,9 +23,11 @@ class TestEvalDataloader(unittest.TestCase):
         self.config.sample_rate_out = 16000
         self.config.sample_rate_in = 24000
 
-        whisper_config = OmegaConf.load(
-            "spane/config/components/asr/whisper_tiny.yaml"
-        )["whisper_tiny"]
+        whisper_config = OmegaConf.load("spane/config/components/asr/whisper.yaml")[
+            "whisper"
+        ]
+        whisper_config.size = "tiny"
+        whisper_config.language = "en"
         self.model = Whisper(whisper_config, self.device)
 
     def test_eval_dataloader(self):

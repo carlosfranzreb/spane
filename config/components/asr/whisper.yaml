@@ -1,4 +1,4 @@
-whisper_large:
+whisper:
   cls: spkanon_eval.featex.Whisper
   size: large # can be: tiny, base, small, medium, large
   language: en

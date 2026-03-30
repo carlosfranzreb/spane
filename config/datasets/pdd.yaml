@@ -4,4 +4,4 @@ data:
     eval:
       - spane/data/gita/sentences.txt
     targets:
-      - spane/data/gita/sentences.txt
+      - spane/spkanon_models/whisper_kokoro/targets_es.txt

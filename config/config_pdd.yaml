@@ -1,0 +1,23 @@
+datasets_cfg: spane/config/datasets/pdd.yaml
+seed: 0
+log_dir: logs/debug_whisper
+device: cpu # overwritten on runtime
+
+inference: true
+
+target_selection:
+  cls: spkanon_eval.target_selection.RandomSelector
+  consistent_targets: false
+  same_source_target: false
+
+pipeline_cfg: spane/spkanon_models/whisper_kokoro/config_es.yaml # must clone spkanon_models repo first (see README)
+
+eval: # calls func `eval_dir` of each component
+  config:
+    seed: 300
+    baseline: false # non-anonymized speech is evaluated; inference and train must be false, eval must be present
+    exp_folder: null # if not null, this folder is evaluated instead of current exp_folder
+
+  components:
+    # pdd_cfg: spane/config/components/pdd/sentences.yaml
+    # large_asr_cfg: spane/config/components/asr/whisper_tiny.yaml

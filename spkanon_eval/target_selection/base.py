@@ -6,34 +6,33 @@ import torch
 from torch import Tensor
 from omegaconf import DictConfig
 
-
 LOGGER = logging.getLogger("progress")
 
 
 class BaseSelector:
     def __init__(self, cfg: DictConfig, target_df: str = None) -> None:
         """
-        Initialize the target selector with the target vectors and a flag indicating
-        whether the targets should be consistent across the utterances. If this flag
-        is set to True, the targets are stored in a dictionary. This class takes care
-        of updating the dictionary with the new targets and decides when a new target
-        has to be selected. Selectors that inherit this class must implement the
-        `select_new` method, where a new target is selected for a given utterance.
+        Initialize the target selector with configuration parameters and target metadata.
 
-        `same_source_target` is true when the source and target datasets are the same.
-        The target selector will then check that their IDs differ, to ensure each
-        source is anonymized with a different speaker. This flag is ignored by the
-        FixedSelector.
+        Args:
+            cfg (DictConfig): Configuration dictionary containing selection parameters:
+                - consistent_targets (bool): If True, stores assignments in a dictionary
+                  to ensure targets remain consistent across utterances for the same speaker.
+                - same_source_target (bool, optional): If True, checks that source and
+                  target IDs differ to ensure anonymization when source and target
+                  datasets are identical. Ignored by `FixedSelector`. Defaults to False.
+                - target_constraints (dict, optional): Hard filters for target speakers
+                  (e.g., {"is_male": True}).
+                - conversion_constraints (dict, optional): Constraints relative to the
+                  source speaker's attributes. Valid values for each key are:
+                  - "same": Target must have the same attribute value as the source.
+                  - "opposite": Target must have a different attribute value.
+                  - None: No constraint for this attribute.
+            target_df (str, optional): Path to the target dataset file (JSONL format)
+                containing speaker metadata used to evaluate constraints.
 
-        Gender conversion is optional and can be enabled by setting the
-        `gender_conversion` parameter. There are two possible values for this
-        parameter:
-        - same: the target speaker must have the same gender as the source speaker.
-        - opposite: the target speaker must have the opposite gender as the source
-            speaker.
-
-        When gender conversion is applied, the gender of the target speakers is
-        required. It must be defined in the target datafile with `is_male`.
+        Raises:
+            ValueError: If an invalid value is provided in `conversion_constraints`.
         """
         self.cfg = cfg
         self.targets = dict() if cfg.consistent_targets else None

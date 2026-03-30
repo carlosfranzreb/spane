@@ -10,12 +10,13 @@ import json
 from math import ceil
 
 import torch
+from torch import Tensor
 from torch.cuda import OutOfMemoryError
 import torchaudio
 from tqdm import tqdm
 
 from spkanon_eval.utils import reset
-from spkanon_eval.anonymizer import Anonymizer
+from spkanon_eval.datamodules import AudioBatch
 
 LOGGER = logging.getLogger("progress")
 SIZE_INCREASE = 8  # min. increase of batch size
@@ -52,6 +53,7 @@ class BatchSizeCalculator:
         Returns:
             A dictionary mapping the maximum duration of a batch to the max. number of
             samples of that duration that can fit in GPU memory.
+
         """
         LOGGER.info(
             f"Computing chunk sizes for {datafile} and {model.__class__.__name__}"
@@ -60,9 +62,13 @@ class BatchSizeCalculator:
         # read the first and ~last lines of the datafile to get the min and max duration
         with open(datafile) as f:
             lines = f.readlines()
+
         min_line = -10 if len(lines) > self.n_chunks * 10 else -1
         min_dur = float(json.loads(lines[min_line])["duration"])
         max_dur = float(json.loads(lines[0])["duration"])
+
+        # get sample metadata from the datafile
+        sample_metadata = json.loads(lines[0])
 
         if model.device == "cpu":
             LOGGER.warning("\tModel is on CPU. Skipping chunk size computation.")
@@ -108,7 +114,7 @@ class BatchSizeCalculator:
             audio_chunk = map_audio_to_dur(audio, n_samples)
 
             # estimate the max. batch size
-            batch_size = max_batch_size(model, audio_chunk, batch_size)
+            batch_size = max_batch_size(model, audio_chunk, sample_metadata, batch_size)
             out_sizes[chunk_max_dur] = batch_size
             self.chunks[model_key][chunk_max_dur] = batch_size
 
@@ -117,7 +123,7 @@ class BatchSizeCalculator:
         return out_sizes
 
 
-def map_audio_to_dur(audio: torch.Tensor, n_samples: int) -> torch.Tensor:
+def map_audio_to_dur(audio: Tensor, n_samples: int) -> Tensor:
     """Extend by repeating or clip the audio to match the given number of samples."""
     # gather enough audio for the current chunk size
     if n_samples < audio.shape[0]:
@@ -127,24 +133,26 @@ def map_audio_to_dur(audio: torch.Tensor, n_samples: int) -> torch.Tensor:
         return audio.repeat(n_repeats)[:n_samples]
 
 
-def max_batch_size(model: Anonymizer, audio: torch.Tensor, batch_size: int = 1) -> int:
+def max_batch_size(
+    model, audio: Tensor, sample_metadata: dict, batch_size: int = 1
+) -> int:
     """Estimate the max. batch size for the given audio tensor."""
     total_memory = torch.cuda.get_device_properties(0).total_memory
     out_size = 1
 
     while True:
-        audio_batch = audio.unsqueeze(0).repeat(batch_size, 1)
-        batch = [
-            audio_batch.to(model.device),
+        audio_batched = audio.unsqueeze(0).repeat(batch_size, 1)
+        batch = AudioBatch(
+            audio_batched.to(model.device),
             torch.randint(10, [batch_size], device=model.device),
-            torch.ones(batch_size, device=model.device, dtype=torch.int32)
+            torch.ones(batch_size, device=model.device, dtype=torch.long)
             * audio.shape[0],
-        ]
+            metadata=[sample_metadata] * batch_size,
+        )
         torch.cuda.reset_peak_memory_stats()
         try:
             if hasattr(model, "forward"):
-                data = [{"speaker_id": val.item(), "gender": True} for val in batch[1]]
-                model.forward(batch, data)
+                model.forward(batch)
             else:
                 with torch.no_grad():
                     model.run(batch)

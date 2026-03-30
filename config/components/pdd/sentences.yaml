@@ -1,0 +1,3 @@
+sentences:
+  cls: spkanon_eval.evaluation.PdEvaluator
+  ckpt_dir: checkpoints/pdd/gita/sentences

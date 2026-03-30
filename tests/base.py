@@ -83,9 +83,12 @@ class BaseTestClass(unittest.TestCase):
                     },
                     "datasets": {
                         "eval": [
-                            "spane/data/debug/ls-dev-clean-2.txt",
+                            "spane/tests/datafiles/ls-dev-clean-2.txt",
                         ],
-                        "train_eval": ["spane/data/debug/ls-dev-clean-2.txt"],
+                        "targets": [
+                            "spane/tests/datafiles/ls-dev-clean-2.txt",
+                        ],
+                        "train_eval": ["spane/tests/datafiles/ls-dev-clean-2.txt"],
                         "asv": {
                             "trials": None,
                             "enrolls": None,

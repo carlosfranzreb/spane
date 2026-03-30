@@ -43,7 +43,6 @@ def create_file(folder: str, dataset: str, dump_file: str, root_folder: str):
     labels_f = os.path.join(folder, "Labels", "labels_consensus.json")
     labels = json.load(open(labels_f))
     for file, annotations in labels.items():
-
         if annotations["Split_Set"] != dataset:
             continue
 
@@ -59,7 +58,7 @@ def create_file(folder: str, dataset: str, dump_file: str, root_folder: str):
             "path": path.replace(root_folder, "{root}"),
             "duration": round(duration, 2),
             "label": annotations["SpkrID"],
-            "gender": annotations["Gender"],
+            "is_male": annotations["Gender"] == "Male",
             "utt_emotion": EMOTIONS[annotations["EmoClass"]],
             "utt_arousal": annotations["EmoAct"],
             "utt_dominance": annotations["EmoDom"],

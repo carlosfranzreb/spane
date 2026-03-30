@@ -1,17 +1,19 @@
+import os
 import logging
+import importlib
 
 import torch
 from torch import Tensor
 from omegaconf import DictConfig
 
 from spkanon_eval.setup_module import setup
-
+from spkanon_eval.datamodules import AudioBatch
 
 LOGGER = logging.getLogger("progress")
 
 
 class Anonymizer:
-    def __init__(self, config: DictConfig, log_dir: str) -> None:
+    def __init__(self, config: DictConfig, log_dir: str):
         """Initialize the components and optionally the target selection algorithm."""
         super().__init__()
         self.config = config
@@ -30,13 +32,12 @@ class Anonymizer:
             self.proc_out = self.featproc.pop("output")
 
         # if there is a target selection algorithm, pass it to the right component
-        target_selection_cfg = config.get("target_selection", None)
-        if target_selection_cfg is not None:
-
-            args = [target_selection_cfg]
-            if hasattr(target_selection_cfg, "extra_args"):
-                for arg in target_selection_cfg.extra_args:
-                    args.append(getattr(self, arg))
+        tsa_cfg = config.get("target_selection", None)
+        if tsa_cfg is not None:
+            target_df = os.path.join(self.log_dir, "data", "targets.txt")
+            module_str, cls_str = tsa_cfg.cls.rsplit(".", 1)
+            module = importlib.import_module(module_str)
+            tsa_cls = getattr(module, cls_str)
 
             for module in [self.featproc, self.synthesis]:
                 if module is None:
@@ -46,10 +47,10 @@ class Anonymizer:
                 for name, component in module.items():
                     if hasattr(component, "target_selection"):
                         LOGGER.info(f"Passing target selection algorithm to {name}")
-                        component.init_target_selection(*args)
+                        component.target_selection = tsa_cls(tsa_cfg, target_df)
                         return
 
-    def get_feats(self, batch: list, source_is_male: Tensor) -> dict:
+    def get_feats(self, batch: AudioBatch) -> dict:
         """
         Run the featex, featproc and featfusion modules. Returns anonymized features and
         targets. Sources refer to the input speaker, and targets to the output speaker.
@@ -58,10 +59,24 @@ class Anonymizer:
         if self.featex is not None:
             out = self._run_module(self.featex, batch)
         else:
-            out = {"audio": batch[0], "n_samples": batch[2]}
+            out = {"audio": batch.audios, "n_samples": batch.lens}
 
-        out["source"] = batch[1]
-        out["source_is_male"] = source_is_male
+        # add metadata required by the TSA and remaining components
+        out["source"] = batch.spkids
+        conv_constraints = self.config.target_selection.get(
+            "conversion_constraints", dict()
+        )
+        for c_key, c_value in conv_constraints.items():
+            if c_value is None:
+                continue
+
+            if not batch.metadata or c_key not in batch.metadata[0]:
+                error = f"{c_key} was not found in the batch's metadata"
+                LOGGER.error(error)
+                raise RuntimeError(error)
+
+            out[c_key] = torch.tensor([m[c_key] for m in batch.metadata])
+
         if self.featproc is not None:
             processed = self._run_module(self.featproc, out)
             out_proc = dict()
@@ -70,21 +85,16 @@ class Anonymizer:
             for feat in self.proc_out["featproc"]:
                 out_proc[feat] = processed[feat]
             out = out_proc
+
         if self.featfusion is not None:
             out = self.featfusion.run(out)
+
         return out
 
-    def forward(self, batch: list, data: list) -> tuple[Tensor, Tensor, Tensor]:
+    def forward(self, batch: AudioBatch) -> tuple[Tensor, Tensor, Tensor]:
         """Returns anonymized speech, item lengths and targets."""
-        if "gender" in data[0]:
-            source_is_male = torch.tensor(
-                [d["gender"] == "M" for d in data], dtype=torch.bool, device=self.device
-            )
-        else:
-            source_is_male = torch.zeros_like(batch[1], dtype=torch.bool)
-
         with torch.no_grad():
-            out = self.get_feats(batch, source_is_male)
+            out = self.get_feats(batch)
             synthesis_out = self.synthesis.run(out)
 
         if len(synthesis_out) == 3:
@@ -95,7 +105,7 @@ class Anonymizer:
 
         return audios, audio_lens, target
 
-    def _run_module(self, module: dict, batch: list) -> dict:
+    def _run_module(self, module: dict, batch: AudioBatch | dict) -> dict:
         """
         Run each component of the module with the given batch. The outputs are stored
         in a dictionary. If the output of a component is a dictionary, its keys are
@@ -124,7 +134,7 @@ class Anonymizer:
             if hasattr(component, "target_selection"):
                 return component.target_selection.get_consistent_targets()
 
-    def set_consistent_targets(self, consistent_targets: bool) -> None:
+    def set_consistent_targets(self, consistent_targets: bool):
         """
         Set whether the selected targets should be consistent. We assume that targets
         are selected in the `featproc` module, and iterate over its components looking
@@ -138,7 +148,7 @@ class Anonymizer:
                 LOGGER.info(f"Set consistent targets of {name} to {consistent_targets}")
                 component.target_selection.set_consistent_targets(consistent_targets)
 
-    def to(self, device: str) -> None:
+    def to(self, device: str):
         """
         Overwrite of PyTorch's method, to propagate it to all components.
         """
@@ -150,7 +160,7 @@ class Anonymizer:
         self.synthesis.to(device)
         self.device = device
 
-    def reset(self) -> None:
+    def reset(self):
         """
         Propagate reset() to all the components that have it. This is used to recover
         from an OOM error, as some components may keep some CUDA memory allocated,

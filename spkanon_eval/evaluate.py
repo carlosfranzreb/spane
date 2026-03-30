@@ -41,7 +41,7 @@ def evaluate(exp_folder: str, model: Anonymizer, config: DictConfig) -> None:
         cfg.data = copy.deepcopy(config.data)
         component = setup(cfg, config.device, model=model)
 
-        if cfg.train is True:
+        if cfg.get("train", False) is True:
             LOGGER.info(f"Training component `{name}`")
             component.train(exp_folder, is_baseline)
 

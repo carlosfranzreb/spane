@@ -45,7 +45,7 @@ Here are links to the results of the papers I've written using the framework.
 }
 ```
 
-Introduces the framework, including the utility evaluation with pre-trained models and the use of the [EdAcc](https://groups.inf.ed.ac.uk/edacc/) for the privacy evaluation. 
+Introduces the framework, including the utility evaluation with pre-trained models and the use of the [EdAcc dataset](https://groups.inf.ed.ac.uk/edacc/) for the privacy evaluation.
 I have removed them from the current version to simplify the repository.
 Here is the [commit under which the results can be found](https://github.com/carlosfranzreb/spkanon_eval/tree/28f27eb).
 The notebooks summarizing the results are under `scripts`.
@@ -92,4 +92,3 @@ Read about them in the [component documentation](docs/components.md).
 Alternatively, you can define an `infer` method on your model and replace the current model in the `spkanon_eval/main.py` file.
 The `infer` method should anonymize and unpad batches.
 See `spane.anonymizer.Anonymizer.infer` to learn how we do it.
-

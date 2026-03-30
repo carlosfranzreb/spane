@@ -12,10 +12,10 @@ import copy
 from omegaconf import OmegaConf
 import torch
 from torch.nn.utils.rnn import pad_sequence
-from torch import Tensor
 
 from spkanon_eval.featex import SpkId
 from spkanon_eval.featex import SpkIdConcat
+from spkanon_eval.datamodules import AudioBatch
 from spkanon_eval.datamodules.dataset import load_audio
 from spkanon_eval.utils import seed_everything
 
@@ -44,18 +44,18 @@ class TestSpkid(unittest.TestCase):
 
         self.data_dir = "spane/tests/data/LibriSpeech/dev-clean-2/1988/24833"
 
-    def get_batch(self, samples: list[str]) -> list[Tensor, Tensor, Tensor]:
+    def get_batch(self, samples: list[str]) -> AudioBatch:
         """Return a batch given the samples."""
         audios, speakers = list(), list()
         for sample in samples:
             audios.append(load_audio(os.path.join(self.data_dir, sample), SAMPLE_RATE))
             speakers.append(0)
 
-        return [
+        return AudioBatch(
             pad_sequence(audios, batch_first=True),
-            torch.tensor([audio.shape[0] for audio in audios]),
             torch.tensor(speakers),
-        ]
+            torch.tensor([audio.shape[0] for audio in audios]),
+        )
 
     def test_batches(self):
         """Ensure that batching works with the x-vector model."""
@@ -69,8 +69,8 @@ class TestSpkid(unittest.TestCase):
                 audio = load_audio(os.path.join(self.data_dir, audiofile), SAMPLE_RATE)
                 audio = torch.tensor(audio).unsqueeze(0)
                 length = torch.tensor([audio.shape[1]], dtype=torch.int64)
-
-                emb = model.run((audio, spk, length))
+                batch = AudioBatch(audio, spk, length)
+                emb = model.run(batch)
                 self.assertTrue(emb.shape == (1, 512))
 
         # test with one batch of 2 samples

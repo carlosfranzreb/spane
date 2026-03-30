@@ -39,11 +39,11 @@ class TestDataset(unittest.TestCase):
                 )
                 audio_true = resampler(audio_true)
 
-            audio_dataset, spk, n_samples = self.dataset[sample_idx]
-            self.assertEqual(audio_true.shape[1], audio_dataset.shape[1])
-            self.assertEqual(obj["speaker_id"], spk)
-            self.assertTrue(torch.allclose(audio_true, audio_dataset))
-            self.assertEqual(n_samples, audio_true.shape[1])
+            audio_batch = self.dataset[sample_idx]
+            self.assertEqual(audio_true.shape[1], audio_batch.audios.shape[1])
+            self.assertEqual(obj["speaker_id"], audio_batch.spkids)
+            self.assertTrue(torch.allclose(audio_true, audio_batch.audios))
+            self.assertEqual(audio_batch.lens, audio_true.shape[1])
 
     def test_data_chunking(self):
         """
@@ -60,13 +60,13 @@ class TestDataset(unittest.TestCase):
         expected_sizes = [2, 2, 2, 3, 1]
         sample_idx = 0
         for batch_idx, batch in enumerate(dataset):
-            self.assertEqual(batch[1].shape[0], expected_sizes[batch_idx])
+            self.assertEqual(batch.spkids.shape[0], expected_sizes[batch_idx])
             for batch_sample_idx in range(expected_sizes[batch_idx]):
-                self.assertEqual(batch[1][batch_sample_idx], speakers[sample_idx])
-                self.assertEqual(batch[2][batch_sample_idx], durations[sample_idx])
+                self.assertEqual(batch.spkids[batch_sample_idx], speakers[sample_idx])
+                self.assertEqual(batch.lens[batch_sample_idx], durations[sample_idx])
                 self.assertTrue(
                     torch.allclose(
-                        batch[0][batch_sample_idx, : batch[2][batch_sample_idx]],
+                        batch.audios[batch_sample_idx, : batch.lens[batch_sample_idx]],
                         audios[sample_idx],
                     )
                 )

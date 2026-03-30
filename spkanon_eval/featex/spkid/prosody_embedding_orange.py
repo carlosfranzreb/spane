@@ -4,6 +4,7 @@ from omegaconf import DictConfig
 
 from spkanon_eval.evaluate import SAMPLE_RATE
 from spkanon_eval.component_definitions import InferComponent
+from spkanon_eval.datamodules import AudioBatch
 
 from .speaker_wavlm_pro import EmbeddingsModel
 
@@ -11,7 +12,6 @@ LOGGER = logging.getLogger("progress")
 
 
 class ProsodyEmbeddingOrange(InferComponent):
-
     def __init__(self, config: DictConfig, device: str):
         self.emb_model = EmbeddingsModel.from_pretrained("Orange/Speaker-wavLM-pro")
         self.emb_model.eval()
@@ -22,7 +22,7 @@ class ProsodyEmbeddingOrange(InferComponent):
         self.device = device
 
     @torch.inference_mode()
-    def run(self, batch: list[torch.Tensor]) -> torch.Tensor:
+    def run(self, batch: AudioBatch) -> torch.Tensor:
         """
         Return speaker embeddings for the given batch of utterances.
         ! The max. duration is 20 seconds. Longer utterances are trimmed.
@@ -35,4 +35,4 @@ class ProsodyEmbeddingOrange(InferComponent):
             (batch_size, embedding_dim).
 
         """
-        return self.emb_model(batch[0].to(self.device)[:, : int(20 * SAMPLE_RATE)])
+        return self.emb_model(batch.audios.to(self.device)[:, : int(20 * SAMPLE_RATE)])

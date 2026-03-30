@@ -17,7 +17,7 @@ import torch
 
 from .train import SpeakerBrain, prepare_dataset
 from spkanon_eval.component_definitions import InferComponent
-
+from spkanon_eval.datamodules import AudioBatch
 
 LOGGER = logging.getLogger("progress")
 
@@ -105,7 +105,7 @@ class SpkId(InferComponent):
         self.model.to(device)
 
     @torch.inference_mode()
-    def run(self, batch: list[torch.Tensor]) -> torch.Tensor:
+    def run(self, batch: AudioBatch) -> torch.Tensor:
         """
         Return speaker embeddings for the given batch of utterances.
 
@@ -119,9 +119,8 @@ class SpkId(InferComponent):
             A tensor containing the speaker embeddings with shape
             (batch_size, embedding_dim).
         """
-        return self.model.encode_batch(
-            batch[0].to(self.device), batch[2].to(self.device), True
-        ).squeeze(1)
+        batch = batch.to(self.device)
+        return self.model.encode_batch(batch.audios, batch.lens, True).squeeze(1)
 
     def train(
         self, dump_dir: str, datafile: str, n_sources: int, n_targets: int

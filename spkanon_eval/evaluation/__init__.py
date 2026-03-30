@@ -6,3 +6,4 @@ from .asv.main import ASV  # noqa
 from .naturalness.naturalness_nisqa import NisqaEvaluator  # noqa
 from .performance.performance import PerformanceEvaluator  # noqa
 from .ser.audeering_w2v import EmotionEvaluator  # noqa
+from .pdd.self_ssl import PdEvaluator  # noqa

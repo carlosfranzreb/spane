@@ -27,28 +27,14 @@ class TestEvalWhisper(unittest.TestCase):
         os.makedirs(os.path.join(self.exp_folder))
         self.datafile = "spane/tests/datafiles/ls-dev-clean-2.txt"
 
-        # config = OmegaConf.create(
-        #     {
-        #         "train": False,
-        #         "size": "tiny",
-        #         "output": "text",
-        #         "batch_size": 4,
-        #         "data": {
-        #             "config": {
-        #                 "sample_rate_in": 16000,
-        #                 "num_workers": 0,
-        #                 "chunk_sizes": {"ls-dev-clean-2": {100: 1}},
-        #             },
-        #         },
-        #     }
-        # )
-        config = OmegaConf.load("spane/config/components/asr/whisper_tiny.yaml")[
-            "whisper_tiny"
-        ]
+        config = OmegaConf.load("spane/config/components/asr/whisper.yaml")["whisper"]
+        config.size = "tiny"
+        config.language = "en"
         config.data = OmegaConf.load("spane/config/datasets/config.yaml")
         config.data.config.sample_rate = 16000
         config.data.config.sample_rate_out = 16000
         config.data.config.sample_rate_in = 16000
+
         self.whisper = Whisper(config, "cpu")
         self.whisper.eval_dir(self.exp_folder, self.datafile)
         self.results_dir = os.path.join(self.exp_folder, "eval", "whisper-tiny")
@@ -76,6 +62,7 @@ class TestEvalWhisper(unittest.TestCase):
                 if out[0] == obj["path"]:
                     out_obj = out
                     break
+
             self.assertTrue(out_obj is not None)
             self.assertEqual(len(obj["text"].split()), int(out_obj[2]))
             wer = float(out_obj[3])
@@ -88,11 +75,11 @@ class TestEvalWhisper(unittest.TestCase):
         Test the analysis output:
 
         - `all.txt` should contain the avg. WER of all samples.
-        - `gender.txt` should contain the avg. WER per gender.
+        - `is_male.txt` should contain the avg. WER per gender.
         """
 
         # ensure that the correct number of files is created
-        self.assertEqual(len(os.listdir(self.results_dir)), 3)
+        self.assertEqual(len(os.listdir(self.results_dir)), 4)
 
         # if the analysis has not been run, run it
         if len(self.wers) == 0:
@@ -103,14 +90,15 @@ class TestEvalWhisper(unittest.TestCase):
             all_results = f.readlines()
 
         self.assertEqual(len(all_results), 2)
-        computed_wer = float(all_results[1].split()[-1])
-        self.assertAlmostEqual(computed_wer, sum(self.wers) / len(self.wers), places=2)
+        wer = float(all_results[1].split()[-1])
+        wer_expected = sum(self.wers) / len(self.wers)
+        self.assertTrue(abs(wer - wer_expected) < 0.01)
 
         # check the content of the `gender.txt` file
         with open(self.datafile) as f:
-            sample_genders = [json.loads(line)["gender"] for line in f]
+            sample_genders = [json.loads(line)["is_male"] for line in f]
 
-        with open(os.path.join(self.results_dir, "gender.txt")) as f:
+        with open(os.path.join(self.results_dir, "is_male.txt")) as f:
             gender_results = [line.split() for line in f.readlines()]
 
         self.assertEqual(len(gender_results) - 1, len(set(sample_genders)))
@@ -119,8 +107,8 @@ class TestEvalWhisper(unittest.TestCase):
             gender = line[1]
             computed_wer = float(line[-1])
             true_wers = [
-                self.wers[idx] * (sample_genders[idx] == gender)
+                self.wers[idx] * (sample_genders[idx] == bool(gender))
                 for idx in range(len(self.wers))
             ]
-            true_wer = sum(true_wers) / sum([g == gender for g in sample_genders])
+            true_wer = sum(true_wers) / sum([g == bool(gender) for g in sample_genders])
             self.assertAlmostEqual(computed_wer, true_wer, places=1)

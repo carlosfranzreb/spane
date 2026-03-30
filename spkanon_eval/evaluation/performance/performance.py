@@ -10,6 +10,7 @@ from omegaconf import DictConfig
 from tqdm import tqdm
 
 from spkanon_eval.component_definitions import EvalComponent
+from spkanon_eval.datamodules import AudioBatch
 from spkanon_eval.datamodules.batch_size_calculator import map_audio_to_dur
 from spkanon_eval.anonymizer import Anonymizer
 
@@ -156,7 +157,7 @@ def run_gpu(
             torch.ones(batch_size, device=model.device, dtype=torch.int32)
             * audio.shape[0],
         ]
-        data = [{"speaker_id": val.item(), "gender": True} for val in batch[1]]
+        data = [{"speaker_id": val.item(), "is_male": True} for val in batch.spkids]
 
         # warm-up
         for _ in range(10):
@@ -202,12 +203,12 @@ def run_cpu(
 
     # batch comprises a signal, a speaker label and the audio length
     audio_batch = audio.unsqueeze(0).repeat(batch_size, 1)
-    batch = [
+    batch = AudioBatch(
         audio_batch.to(model.device),
         torch.randint(10, [batch_size], device=model.device),
         torch.ones(batch_size, device=model.device, dtype=torch.int32) * audio.shape[0],
-    ]
-    data = [{"speaker_id": val.item(), "gender": True} for val in batch[1]]
+    )
+    data = [{"speaker_id": val.item(), "is_male": True} for val in batch.spkids]
 
     # warm-up
     for _ in range(10):

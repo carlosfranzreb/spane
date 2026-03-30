@@ -8,14 +8,16 @@ import parselmouth
 import numpy as np
 import logging
 import torch
+from torch import Tensor
 from omegaconf import DictConfig
+
 from spkanon_eval.component_definitions import InferComponent
+from spkanon_eval.datamodules import AudioBatch
 
 LOGGER = logging.getLogger("progress")
 
 
 class ProsodyEmbedding(InferComponent):
-
     def __init__(self, config: DictConfig, device: str) -> None:
         """
         Initialize the prosody embedding model with the given configuration from ecapa.yaml
@@ -35,7 +37,7 @@ class ProsodyEmbedding(InferComponent):
         self.device = device
 
     @torch.inference_mode()
-    def run(self, batch: list[torch.Tensor]) -> torch.Tensor:
+    def run(self, batch: AudioBatch) -> Tensor:
         """
         Return speaker embeddings for the given batch of utterances.
 
@@ -50,7 +52,7 @@ class ProsodyEmbedding(InferComponent):
             (batch_size, embedding_dim).
         """
 
-        waveforms = batch[0].cpu().numpy()
+        waveforms = batch.audios.cpu().numpy()
         embeddings = []
 
         for waveform in waveforms:
@@ -63,7 +65,7 @@ class ProsodyEmbedding(InferComponent):
             embeddings.append(embedding)
 
         embeddings_tensor = torch.tensor(np.array(embeddings), dtype=torch.float32).to(
-            batch[0].device
+            batch.audios.device
         )
         # print(f"output shape: {embeddings_tensor.shape}")
         # print(f"output: {embeddings_tensor}")
@@ -71,7 +73,6 @@ class ProsodyEmbedding(InferComponent):
 
     # approximation of the voiced segments based on f0
     def pitch_and_intensity_contour_segmentation_based_on_pitch(self, sound):
-
         # create pitch contour for the whole audio
         global_pitch_contour = sound.to_pitch_ac(
             pitch_floor=self.pitch_floor,
@@ -182,7 +183,6 @@ class ProsodyEmbedding(InferComponent):
     # segment audio in 3 equal parts with the last segment being the whole utterance based on the paper "Timing Levels in Segment-Based Speech Emotion Recognition"
     # Global Relative Time Intervals Approach is used
     def segment_audio(self, audio):
-
         # calculate the total length of the audio
         audio_data = audio.values[0]
         total_length = len(audio_data)
@@ -335,7 +335,6 @@ class ProsodyEmbedding(InferComponent):
 
         @staticmethod
         def duration_tilt(values):
-
             voiced_indices = np.where(values > 0)[0]
             if len(voiced_indices) == 0:
                 return 0.0

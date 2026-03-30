@@ -2,20 +2,17 @@ import json
 import logging
 from collections.abc import Iterable
 
-from torch import Tensor
 from torch.utils.data import DataLoader
 from omegaconf import DictConfig
 
-from spkanon_eval.datamodules import SpeakerIdDataset, BatchSizeCalculator
+from spkanon_eval.datamodules import AudioBatch, SpeakerIdDataset, BatchSizeCalculator
 
 LOGGER = logging.getLogger("progress")
 bs_calculator = BatchSizeCalculator()
 
 
-def setup_dataloader(model, config: DictConfig, datafile: str) -> DataLoader:
-    """
-    Create a dataloader with the SpeakerIdDataset.
-    """
+def setup_dataloader(config: DictConfig, datafile: str, model) -> DataLoader:
+    """Create a dataloader with the SpeakerIdDataset."""
 
     LOGGER.info(f"Creating dataloader for {datafile}")
     LOGGER.info(f"\tModel: {model.__class__.__name__}")
@@ -30,6 +27,7 @@ def setup_dataloader(model, config: DictConfig, datafile: str) -> DataLoader:
     chunk_sizes = bs_calculator.calculate(
         datafile, model, config.sample_rate_in, max_ratio
     )
+
     return DataLoader(
         dataset=SpeakerIdDataset(datafile, config.sample_rate_in, chunk_sizes),
         num_workers=config.num_workers,
@@ -37,9 +35,7 @@ def setup_dataloader(model, config: DictConfig, datafile: str) -> DataLoader:
     )
 
 
-def eval_dataloader(
-    config: DictConfig, datafile: str, model
-) -> Iterable[str, list[Tensor], dict[str, str]]:
+def eval_dataloader(config: DictConfig, datafile: str, model) -> Iterable[AudioBatch]:
     """
     This function is called by evaluation and inference scripts. It is an
     iterator over the batches and other sample info in the given manifest.
@@ -52,23 +48,25 @@ def eval_dataloader(
         config: the configuration object
         datafile: the path to the manifest file
         model: the model to evaluate
-        max_ratio: the ratio of the GPU memory to use (see `BatchSizeCalculator`)
     """
     LOGGER.info(f"Creating eval. DL for `{datafile}`")
 
     # initialize the dataloader and the iterator object for the sample data
-    dl = setup_dataloader(model, config, datafile)
+    dl = setup_dataloader(config, datafile, model)
     data_iter = data_iterator(datafile)
 
     # iterate over the batches in the dataloader
     for batch in dl:
-        batch = [b.to(model.device) for b in batch]
+        batch = batch.to(model.device)
         data = list()  # additional data to be returned
-        # read as much `data` as there are samples in the batch
-        while len(data) < batch[0].shape[0]:
+
+        # read as much `data` as there are audios in the batch
+        while len(data) < batch.n_audios:
             data.append(next(data_iter))
+
         # yield the batch, the datafile and the additional data
-        yield batch, data
+        batch.metadata = data
+        yield batch
 
 
 def data_iterator(datafile: str) -> Iterable[dict]:

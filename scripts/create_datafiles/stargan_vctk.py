@@ -2,7 +2,6 @@
 val. data: src/featproc/models/StarGANv2VC/Data/val_list.txt
 """
 
-
 import os
 import json
 from argparse import ArgumentParser
@@ -27,9 +26,7 @@ def create_file(stargan_file, vctk_folder, microphone, dump_file, root_folder):
         (
             utt_file,
             stargan_speaker,
-        ) = end.split(
-            "|"
-        )  # spk label from StarGAN
+        ) = end.split("|")  # spk label from StarGAN
         utt = utt_file.replace(".wav", "")  # utterance ID
         if len(utt) < 3:  # prepend zeros to utterance ID
             utt = (3 - len(utt)) * "0" + utt
@@ -69,7 +66,7 @@ def get_speaker_data(spk_id, speakers_file):
                 data = line.strip().split()
                 return {
                     "age": int(data[1]),
-                    "gender": data[2],
+                    "is_male": data[2] == "M",
                     "accent": data[3],
                     "region": data[4],
                     "dataset": "vctk",

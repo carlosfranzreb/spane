@@ -1,0 +1,7 @@
+data:
+  config_cfg: spane/config/datasets/config.yaml
+  datasets:
+    eval:
+      - spane/data/gita/sentences.txt
+    targets:
+      - spane/spkanon_models/whisper_kokoro/targets_es.txt

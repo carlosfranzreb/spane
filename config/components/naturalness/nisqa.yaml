@@ -1,6 +1,5 @@
 naturalness_nisqa:
   cls: spkanon_eval.evaluation.NisqaEvaluator
   init: spane/NISQA/weights/nisqa_tts.tar
-  train: false
   num_workers: ${data.config.num_workers}
   batch_size: 32

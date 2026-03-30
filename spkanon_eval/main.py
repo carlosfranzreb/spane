@@ -27,7 +27,7 @@ def main(config: DictConfig):
 
     model = Anonymizer(config, exp_folder)
 
-    if "inference" in config and config.inference.run is not False:
+    if "inference" in config and config.inference is not False:
         LOGGER.info(f"### Start of inference with experiment folder `{exp_folder}`")
         # create the eval datafiles if they don't exist
         if not os.path.exists(os.path.join(exp_folder, "data", "eval.txt")):
@@ -44,7 +44,7 @@ def main(config: DictConfig):
             files = ["eval"]
             if config.eval.config.baseline is False:
                 files.append("anon_eval")
-            if any([c.train for c in config.eval.components.values()]):
+            if any([c.get("train", False) for c in config.eval.components.values()]):
                 files.append("train_eval")
                 if os.path.exists(
                     os.path.join(
@@ -63,7 +63,7 @@ def main(config: DictConfig):
                 )
             config.data.config.anon_folder = config.eval.config.exp_folder
 
-        elif any([c.train for c in config.eval.components.values()]):
+        elif any([c.get("train", False) for c in config.eval.components.values()]):
             prepare_datafile("train_eval", config, exp_folder)
 
         # create the eval datafiles if they don't exist (for the baseline)

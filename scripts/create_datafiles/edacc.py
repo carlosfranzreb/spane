@@ -121,7 +121,7 @@ def create_file(
                     "label": spk,
                     "duration": round(duration, 2),
                     "text": normalize_text(texts[utt_id]),
-                    "gender": speaker_info.iloc[0, 5],
+                    "is_male": speaker_info.iloc[0, 5] == "Male",
                     "age": current_year - int(speaker_info.iloc[0, 6]),
                     "ethnicity": speaker_info.iloc[0, 7],
                     "education": speaker_info.iloc[0, 8],
@@ -144,7 +144,7 @@ def normalize_text(text: str) -> str:
     - tags enclosed by <>
     - (())
     """
-    text = re.sub(r'<[^>]*>', '', text)
+    text = re.sub(r"<[^>]*>", "", text)
     text = text.replace("(())", "")
     text = text.replace("  ", " ")
     return text.strip()
